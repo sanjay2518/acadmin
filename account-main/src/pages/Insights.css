@@ -1,0 +1,307 @@
+/* ========================================
+   INSIGHTS PAGE STYLES
+   ======================================== */
+
+/* Filters Section */
+.insights-filters {
+    background: var(--primary-white);
+    padding: var(--space-6) 0;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 70px;
+    z-index: 100;
+}
+
+.filters-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+}
+
+.filter-categories {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: var(--space-2) var(--space-4);
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.filter-btn:hover {
+    border-color: var(--primary-black);
+    color: var(--primary-black);
+}
+
+.filter-btn.active {
+    background: var(--primary-black);
+    border-color: var(--primary-black);
+    color: var(--primary-white);
+}
+
+.filter-search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+    min-width: 250px;
+}
+
+.filter-search svg {
+    width: 20px;
+    height: 20px;
+    color: var(--gray-500);
+    flex-shrink: 0;
+}
+
+.filter-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: var(--text-sm);
+    color: var(--primary-black);
+}
+
+.filter-search input::placeholder {
+    color: var(--gray-500);
+}
+
+/* Insights Grid */
+.insights-content {
+    background: var(--gray-100);
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 992px) {
+    .insights-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-search {
+        width: 100%;
+    }
+}
+
+/* No Results */
+.no-results {
+    text-align: center;
+    padding: var(--space-16) 0;
+}
+
+.no-results-icon {
+    font-size: var(--text-6xl);
+    margin-bottom: var(--space-6);
+}
+
+.no-results h3 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-2);
+}
+
+.no-results p {
+    color: var(--gray-600);
+    margin-bottom: var(--space-6);
+}
+
+/* Newsletter Section */
+.newsletter-section {
+    background: var(--primary-dark);
+}
+
+.newsletter-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-12);
+    align-items: center;
+}
+
+@media (max-width: 992px) {
+    .newsletter-content {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+    }
+}
+
+.newsletter-text h2 {
+    font-size: var(--text-4xl);
+    color: var(--primary-white);
+    margin-bottom: var(--space-4);
+}
+
+.newsletter-text p {
+    color: var(--gray-400);
+    line-height: 1.8;
+}
+
+.newsletter-form {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+}
+
+.newsletter-input-group {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.newsletter-input-group input {
+    flex: 1;
+    padding: var(--space-4);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    color: var(--primary-white);
+    font-size: var(--text-base);
+}
+
+.newsletter-input-group input::placeholder {
+    color: var(--gray-500);
+}
+
+.newsletter-input-group input:focus {
+    outline: none;
+    border-color: var(--accent-green);
+}
+
+.newsletter-disclaimer {
+    font-size: var(--text-xs);
+    color: var(--gray-500);
+    margin-top: var(--space-4);
+    margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    .newsletter-input-group {
+        flex-direction: column;
+    }
+}
+
+/* Resources Section */
+.resources-section {
+    background: var(--primary-white);
+}
+
+.resources-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 768px) {
+    .resources-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.resource-card {
+    text-align: center;
+    padding: var(--space-8);
+    background: var(--gray-100);
+    border-radius: var(--radius-xl);
+    transition: all var(--transition-base);
+}
+
+.resource-card:hover {
+    background: var(--primary-white);
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-5px);
+}
+
+.resource-icon {
+    font-size: var(--text-5xl);
+    margin-bottom: var(--space-4);
+}
+
+.resource-card h3 {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-3);
+}
+
+.resource-card p {
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-4);
+}
+
+.resource-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+    color: var(--accent-blue);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.resource-link:hover {
+    color: var(--accent-green);
+}
+
+.resource-link svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Resource Meta */
+.resource-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.resource-format,
+.resource-size {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    background: var(--primary-white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--gray-600);
+}
+
+.resource-format {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border: none;
+}
+
+.resource-card:hover .resource-link {
+    background: var(--accent-blue);
+    color: white;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+}
+
+.resource-card:hover .resource-link:hover {
+    background: var(--accent-green);
+}

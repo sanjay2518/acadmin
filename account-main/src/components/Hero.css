@@ -1,0 +1,346 @@
+/* ========================================
+   HERO COMPONENT STYLES
+   ======================================== */
+
+.hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-dark);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+}
+
+.hero-medium {
+    min-height: 70vh;
+}
+
+.hero-small {
+    min-height: 50vh;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg,
+            rgba(0, 0, 0, 0.8) 0%,
+            rgba(0, 0, 0, 0.6) 50%,
+            rgba(0, 0, 0, 0.8) 100%);
+    z-index: 1;
+}
+
+/* Particles Animation */
+.hero-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    opacity: 0.5;
+    animation: float 8s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+    animation-duration: 10s;
+}
+
+.particle:nth-child(2) {
+    top: 60%;
+    left: 80%;
+    animation-delay: 1s;
+    animation-duration: 8s;
+}
+
+.particle:nth-child(3) {
+    top: 40%;
+    left: 50%;
+    animation-delay: 2s;
+    animation-duration: 12s;
+}
+
+.particle:nth-child(4) {
+    top: 80%;
+    left: 20%;
+    animation-delay: 3s;
+    animation-duration: 9s;
+}
+
+.particle:nth-child(5) {
+    top: 10%;
+    left: 70%;
+    animation-delay: 4s;
+    animation-duration: 11s;
+}
+
+/* Hero Container */
+.hero-container {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-32) var(--space-6);
+    text-align: center;
+}
+
+.hero-left .hero-container {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.hero-right .hero-container {
+    align-items: flex-end;
+    text-align: right;
+}
+
+/* Hero Content */
+.hero-content {
+    max-width: 900px;
+}
+
+.hero-left .hero-content {
+    max-width: 700px;
+}
+
+.hero-subtitle {
+    display: inline-block;
+    padding: var(--space-2) var(--space-4);
+    background: rgba(0, 210, 106, 0.2);
+    border: 1px solid rgba(0, 210, 106, 0.3);
+    border-radius: var(--radius-full);
+    color: var(--accent-green);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-6);
+}
+
+.hero-title {
+    font-size: var(--text-7xl);
+    font-weight: 800;
+    color: var(--primary-white);
+    line-height: 1.1;
+    margin-bottom: var(--space-6);
+    letter-spacing: -0.03em;
+}
+
+.hero-title span {
+    color: var(--accent-green);
+}
+
+.hero-description {
+    font-size: var(--text-xl);
+    color: var(--gray-300);
+    line-height: 1.7;
+    max-width: 650px;
+    margin: 0 auto var(--space-8);
+}
+
+.hero-left .hero-description {
+    margin-left: 0;
+}
+
+/* Hero Actions */
+.hero-actions {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.hero-left .hero-actions {
+    justify-content: flex-start;
+}
+
+.hero-actions .btn svg {
+    width: 18px;
+    height: 18px;
+    transition: transform var(--transition-fast);
+}
+
+.hero-actions .btn:hover svg {
+    transform: translateX(4px);
+}
+
+/* Scroll Indicator */
+.hero-scroll-indicator {
+    position: absolute;
+    bottom: var(--space-8);
+    left: 0;
+    right: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--gray-400);
+    font-size: var(--text-sm);
+    animation: fadeIn 1s ease 1s forwards;
+    opacity: 0;
+    text-align: center;
+}
+
+.scroll-arrow {
+    width: 30px;
+    height: 50px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 15px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: var(--space-2);
+    animation: bounce 2s infinite;
+}
+
+.scroll-arrow svg {
+    width: 16px;
+    height: 16px;
+    color: var(--accent-green);
+}
+
+@keyframes bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateY(0);
+    }
+
+    40% {
+        transform: translateY(-10px);
+    }
+
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Decorative Elements */
+.hero-decoration {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.decoration-circle {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 210, 106, 0.2);
+}
+
+.decoration-circle-1 {
+    width: 500px;
+    height: 500px;
+    top: -250px;
+    right: -100px;
+    animation: pulse 4s infinite;
+}
+
+.decoration-circle-2 {
+    width: 300px;
+    height: 300px;
+    bottom: -100px;
+    left: -50px;
+    animation: pulse 4s infinite 2s;
+}
+
+.decoration-line {
+    position: absolute;
+    width: 1px;
+    height: 100px;
+    background: linear-gradient(to bottom, transparent, var(--accent-green), transparent);
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: shimmer 2s infinite;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .hero-title {
+        font-size: var(--text-6xl);
+    }
+}
+
+@media (max-width: 992px) {
+    .hero-title {
+        font-size: var(--text-5xl);
+    }
+
+    .hero-description {
+        font-size: var(--text-lg);
+    }
+
+    .decoration-circle-1,
+    .decoration-circle-2 {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        min-height: 80vh;
+    }
+
+    .hero-title {
+        font-size: var(--text-4xl);
+    }
+
+    .hero-description {
+        font-size: var(--text-base);
+    }
+
+    .hero-scroll-indicator {
+        display: none;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: var(--text-3xl);
+    }
+
+    .hero-subtitle {
+        font-size: var(--text-xs);
+    }
+}

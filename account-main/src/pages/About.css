@@ -1,0 +1,338 @@
+/* ========================================
+   ABOUT PAGE STYLES
+   ======================================== */
+
+/* Mission Section */
+.mission-section {
+    background: var(--primary-white);
+}
+
+.mission-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-12);
+    align-items: center;
+}
+
+@media (max-width: 992px) {
+    .mission-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+    }
+}
+
+.mission-content h2 {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-6);
+}
+
+.mission-content p {
+    color: var(--gray-600);
+    line-height: 1.8;
+    margin-bottom: var(--space-4);
+}
+
+.mission-features {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+}
+
+.mission-features .feature {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-weight: 600;
+}
+
+.mission-features .feature svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-green);
+}
+
+.mission-image {
+    aspect-ratio: 4/3;
+}
+
+.image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--gradient-dark);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+}
+
+/* Values Section */
+.values-section {
+    background: var(--primary-dark);
+}
+
+.values-section .text-white {
+    color: var(--primary-white);
+}
+
+.values-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 992px) {
+    .values-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .values-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.value-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    text-align: center;
+    transition: all var(--transition-base);
+}
+
+.value-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-green);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.value-icon {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+    display: block;
+}
+
+.value-card h3 {
+    font-size: var(--text-xl);
+    color: var(--primary-white);
+    margin-bottom: var(--space-3);
+}
+
+.value-card p {
+    font-size: var(--text-sm);
+    color: var(--gray-400);
+    line-height: 1.7;
+}
+
+/* Timeline Section */
+.timeline-section {
+    background: var(--gray-100);
+}
+
+.timeline {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 80px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--gray-300);
+}
+
+@media (max-width: 768px) {
+    .timeline::before {
+        left: 40px;
+    }
+}
+
+.timeline-item {
+    display: flex;
+    gap: var(--space-8);
+    margin-bottom: var(--space-8);
+    position: relative;
+}
+
+.timeline-marker {
+    flex-shrink: 0;
+    width: 100px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .timeline-marker {
+        width: 60px;
+    }
+}
+
+.timeline-marker::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 10px;
+    width: 14px;
+    height: 14px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    border: 3px solid var(--primary-white);
+    box-shadow: var(--shadow-sm);
+}
+
+.timeline-year {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--accent-green);
+}
+
+.timeline-content {
+    flex: 1;
+    background: var(--primary-white);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.timeline-content h4 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-2);
+}
+
+.timeline-content p {
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    margin: 0;
+}
+
+/* Leadership Section */
+.leadership-section {
+    background: var(--gray-100);
+}
+
+.leadership-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 992px) {
+    .leadership-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .leadership-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Recognition Section */
+.recognition-section {
+    background: var(--primary-white);
+}
+
+.recognition-content {
+    text-align: center;
+}
+
+.recognition-text {
+    max-width: 600px;
+    margin: 0 auto var(--space-12);
+}
+
+.recognition-text h2 {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+}
+
+.recognition-text p {
+    color: var(--gray-600);
+}
+
+.awards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 992px) {
+    .awards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .awards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.award-item {
+    padding: var(--space-6);
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base);
+}
+
+.award-item:hover {
+    background: var(--primary-white);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px);
+}
+
+.award-icon {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+}
+
+.award-item h4 {
+    font-size: var(--text-base);
+    margin-bottom: var(--space-2);
+}
+
+.award-item p {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    margin: 0;
+}
+
+/* About CTA */
+.about-cta {
+    background: var(--primary-dark);
+}
+
+.about-cta .cta-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.about-cta h2 {
+    font-size: var(--text-4xl);
+    color: var(--primary-white);
+    margin-bottom: var(--space-4);
+}
+
+.about-cta p {
+    font-size: var(--text-lg);
+    color: var(--gray-400);
+    margin-bottom: var(--space-8);
+}
+
+.about-cta .cta-actions {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+}

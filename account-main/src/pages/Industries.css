@@ -1,0 +1,266 @@
+/* ========================================
+   INDUSTRIES PAGE STYLES
+   ======================================== */
+
+/* Industries Intro */
+.industries-intro {
+    max-width: 600px;
+    margin-bottom: var(--space-12);
+}
+
+.industries-intro h2 {
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+}
+
+.industries-intro p {
+    color: var(--gray-600);
+    line-height: 1.8;
+}
+
+/* Industries Grid */
+.industries-grid-large {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+}
+
+@media (max-width: 992px) {
+    .industries-grid-large {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .industries-grid-large {
+        grid-template-columns: 1fr;
+    }
+}
+
+.industry-card-large {
+    display: flex;
+    flex-direction: column;
+    background: var(--primary-white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-base);
+}
+
+.industry-card-large:hover {
+    border-color: var(--accent-green);
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-2xl);
+}
+
+.industry-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+.industry-icon-large {
+    font-size: var(--text-4xl);
+}
+
+.industry-card-large h3 {
+    font-size: var(--text-2xl);
+    color: var(--primary-black);
+}
+
+.industry-tagline {
+    font-size: var(--text-sm);
+    color: var(--accent-green);
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+}
+
+.industry-description {
+    color: var(--gray-600);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    flex: 1;
+    margin-bottom: var(--space-4);
+}
+
+.industry-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+    color: var(--accent-blue);
+    transition: all var(--transition-fast);
+}
+
+.industry-card-large:hover .industry-cta {
+    color: var(--accent-green);
+}
+
+.industry-cta svg {
+    width: 18px;
+    height: 18px;
+    transition: transform var(--transition-fast);
+}
+
+.industry-card-large:hover .industry-cta svg {
+    transform: translateX(5px);
+}
+
+/* Challenges Section */
+.challenges-section {
+    background: var(--primary-white);
+}
+
+.challenges-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-12);
+}
+
+@media (max-width: 992px) {
+    .challenges-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+    }
+}
+
+.challenges-column h2,
+.solutions-column h2 {
+    font-size: var(--text-3xl);
+    margin-bottom: var(--space-6);
+}
+
+.challenges-list,
+.solutions-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.challenges-list li,
+.solutions-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
+}
+
+.challenges-list li svg {
+    width: 24px;
+    height: 24px;
+    color: #e74c3c;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.solutions-list li svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-green);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Industry Services */
+.industry-services {
+    background: var(--gray-100);
+}
+
+/* Other Industries */
+.other-industries {
+    background: var(--primary-white);
+}
+
+.industries-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+@media (max-width: 992px) {
+    .industries-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .industries-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.industry-link-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--primary-black);
+    transition: all var(--transition-base);
+    border: 1px solid transparent;
+}
+
+.industry-link-card:hover {
+    background: var(--primary-white);
+    border-color: var(--accent-green);
+    transform: translateX(5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.industry-link-card .industry-icon {
+    font-size: var(--text-2xl);
+}
+
+.industry-link-card .industry-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.industry-link-card svg {
+    width: 20px;
+    height: 20px;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all var(--transition-fast);
+    color: var(--accent-green);
+}
+
+.industry-link-card:hover svg {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Industry CTA Section */
+.industry-cta-section,
+.industries-cta {
+    background: var(--primary-dark);
+    width: 100%;
+}
+
+.industry-cta-section .cta-content,
+.industries-cta .cta-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.industry-cta-section h2,
+.industries-cta h2 {
+    font-size: var(--text-4xl);
+    color: var(--primary-white);
+    margin-bottom: var(--space-4);
+}
+
+.industry-cta-section p,
+.industries-cta p {
+    font-size: var(--text-lg);
+    color: var(--gray-400);
+    margin-bottom: var(--space-8);
+}

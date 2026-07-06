@@ -1,0 +1,17 @@
+/* App-level styles */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  padding-top: 80px;
+  /* Account for fixed header */
+}
+
+/* Ensure footer stays at bottom */
+footer {
+  flex-shrink: 0;
+}
