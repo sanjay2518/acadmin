@@ -1,18 +1,20 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
 import { 
   Building2, TrendingUp, TrendingDown, DollarSign, 
-  CreditCard, FileText, AlertCircle, LogOut 
+  CreditCard, FileText, AlertCircle, Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 
-// Mock Data
-const monthlyData = [
+const API = "http://localhost:8000";
+
+// Fallback mock data shown while loading or when Xero is not connected
+const MOCK_MONTHLY = [
   { name: 'Jan', revenue: 4000, expenses: 2400 },
   { name: 'Feb', revenue: 3000, expenses: 1398 },
   { name: 'Mar', revenue: 2000, expenses: 9800 },
@@ -22,55 +24,82 @@ const monthlyData = [
   { name: 'Jul', revenue: 3490, expenses: 4300 },
 ];
 
-const recentInvoices = [
-  { id: 'INV-001', client: 'Acme Corp', amount: '£1,200', status: 'Paid', date: '2026-07-01' },
-  { id: 'INV-002', client: 'Globex Inc', amount: '£3,450', status: 'Overdue', date: '2026-06-15' },
-  { id: 'INV-003', client: 'Soylent Corp', amount: '£890', status: 'Pending', date: '2026-07-05' },
-];
+function extractKpiValue(report: any, label: string): string {
+  try {
+    for (const section of report?.Reports?.[0]?.Rows ?? []) {
+      for (const row of section?.Rows ?? []) {
+        const cells = row?.Cells ?? [];
+        if (cells[0]?.Value?.toLowerCase().includes(label.toLowerCase())) {
+          return `£${Number(cells[1]?.Value ?? 0).toLocaleString('en-GB')}`;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  return '—';
+}
 
 export default function DashboardPage() {
+  const [invoices, setInvoices]     = useState<any[]>([]);
+  const [kpis, setKpis]             = useState<any>(null);
+  const [loading, setLoading]       = useState(true);
+  const [lastSync, setLastSync]     = useState<string>('—');
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API}/api/invoices?status=AUTHORISED`).then(r => r.ok ? r.json() : []),
+      fetch(`${API}/api/dashboard/kpis`).then(r => r.ok ? r.json() : null),
+    ]).then(([inv, k]) => {
+      setInvoices(Array.isArray(inv) ? inv.slice(0, 3) : []);
+      setKpis(k);
+      setLastSync(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const pl  = kpis?.profit_and_loss;
+  const bs  = kpis?.balance_sheet;
+  const revenue  = pl  ? extractKpiValue(pl, 'total income')   : '£124,500';
+  const expenses = pl  ? extractKpiValue(pl, 'total expenses')  : '£86,200';
+  const profit   = pl  ? extractKpiValue(pl, 'net profit')      : '£38,300';
+  const bank     = bs  ? extractKpiValue(bs, 'bank')            : '£42,900';
+
+  const recentInvoices = invoices.length > 0
+    ? invoices.map((inv: any) => ({
+        id:     inv.InvoiceNumber ?? inv.InvoiceID?.slice(0, 8),
+        client: inv.Contact?.Name ?? 'Unknown',
+        amount: `£${Number(inv.AmountDue ?? 0).toLocaleString('en-GB')}`,
+        status: inv.Status === 'AUTHORISED' ? 'Pending' : inv.Status,
+        date:   inv.DueDate?.split('T')[0] ?? '',
+      }))
+    : [
+        { id: 'INV-001', client: 'Acme Corp',    amount: '£1,200', status: 'Paid',    date: '2026-07-01' },
+        { id: 'INV-002', client: 'Globex Inc',   amount: '£3,450', status: 'Overdue', date: '2026-06-15' },
+        { id: 'INV-003', client: 'Soylent Corp', amount: '£890',   status: 'Pending', date: '2026-07-05' },
+      ];
+
   return (
     <div className="p-8">
         <header className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">Financial Overview</h2>
-            <p className="text-gray-500 mt-1">Welcome back, Demo Company Ltd. Data synced with Xero 5 mins ago.</p>
+            <p className="text-gray-500 mt-1">
+              {loading ? 'Loading data…' : `Data synced with Xero at ${lastSync}.`}
+            </p>
           </div>
-          <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm">
+          <button
+            onClick={() => { setLoading(true); window.location.reload(); }}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm flex items-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             Refresh Data
           </button>
         </header>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card 
-            title="Revenue (YTD)" 
-            value="£124,500" 
-            icon={<TrendingUp className="w-6 h-6 text-green-600" />} 
-            trend="+12% from last year"
-            trendPositive={true}
-          />
-          <Card 
-            title="Expenses (YTD)" 
-            value="£86,200" 
-            icon={<TrendingDown className="w-6 h-6 text-red-600" />} 
-            trend="+5% from last year"
-            trendPositive={false}
-          />
-          <Card 
-            title="Net Profit" 
-            value="£38,300" 
-            icon={<DollarSign className="w-6 h-6 text-blue-600" />} 
-            trend="+8% from last year"
-            trendPositive={true}
-          />
-          <Card 
-            title="Bank Balance" 
-            value="£42,900" 
-            icon={<Building2 className="w-6 h-6 text-indigo-600" />} 
-            trend="Updated today"
-            trendPositive={true}
-          />
+          <Card title="Revenue (YTD)"  value={revenue}  icon={<TrendingUp  className="w-6 h-6 text-green-600"  />} trend="From Xero P&L"  trendPositive={true}  />
+          <Card title="Expenses (YTD)" value={expenses} icon={<TrendingDown className="w-6 h-6 text-red-600"    />} trend="From Xero P&L"  trendPositive={false} />
+          <Card title="Net Profit"     value={profit}   icon={<DollarSign  className="w-6 h-6 text-blue-600"   />} trend="From Xero P&L"  trendPositive={true}  />
+          <Card title="Bank Balance"   value={bank}     icon={<Building2   className="w-6 h-6 text-indigo-600" />} trend="From Balance Sheet" trendPositive={true} />
         </div>
 
         {/* Charts Row */}
@@ -79,7 +108,7 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Revenue vs Expenses</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData}>
+                <LineChart data={MOCK_MONTHLY}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} tickFormatter={(value) => `£${value/1000}k`} />
@@ -95,7 +124,7 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Cash Flow</h3>
             <div className="flex-1">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData.slice(-4)}>
+                <BarChart data={MOCK_MONTHLY.slice(-4)}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} />
                   <Tooltip cursor={{fill: '#F3F4F6'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
