@@ -117,27 +117,55 @@ async def _xero_post(path: str, payload: dict) -> dict:
     return resp.json()
 
 # ── OAuth ─────────────────────────────────────────────────────────────────────
+XERO_SCOPES = (
+    "offline_access openid profile email "
+    "accounting.settings.read "
+    "accounting.contacts.read "
+    "accounting.invoices.read "
+    "accounting.reports.aged.read "
+    "accounting.reports.balancesheet.read "
+    "accounting.reports.profitandloss.read"
+)
 
 @app.get("/api/auth/xero/login")
 def xero_login():
-    state = secrets.token_urlsafe(16)
-    # Store state temporarily (simple approach; use Redis/DB for production)
-    supabase.table("oauth_states").upsert({"state": state}).execute()
-    scopes = "offline_access accounting.transactions accounting.reports.read accounting.contacts accounting.settings.read"
+    state = secrets.token_urlsafe(32)
+    supabase.table("oauth_states").insert({"state": state}).execute()
+    from urllib.parse import quote
     url = (
         f"https://login.xero.com/identity/connect/authorize"
         f"?response_type=code&client_id={CLIENT_ID}"
-        f"&redirect_uri={REDIRECT_URI}&scope={scopes}&state={state}"
+        f"&redirect_uri={quote(REDIRECT_URI)}&scope={quote(XERO_SCOPES)}&state={state}"
     )
     return RedirectResponse(url)
 
 
+@app.get("/api/auth/xero/debug")
+def xero_debug():
+    """Temporary: shows the exact OAuth URL being built."""
+    from urllib.parse import quote
+    scopes = "offline_access openid profile email accounting.transactions.read accounting.reports.read accounting.contacts.read accounting.settings.read"
+    url = (
+        f"https://login.xero.com/identity/connect/authorize"
+        f"?response_type=code&client_id={CLIENT_ID}"
+        f"&redirect_uri={quote(REDIRECT_URI)}&scope={quote(scopes)}&state=debugtest"
+    )
+    return {"client_id": CLIENT_ID, "redirect_uri": REDIRECT_URI, "full_url": url}
+
+
 @app.get("/api/auth/xero/callback")
-async def xero_callback(code: str = Query(...), state: str = Query(...)):
+async def xero_callback(
+    state: str = Query(...),
+    code: str = Query(None),
+    error: str = Query(None),
+    error_description: str = Query(None),
+):
+    if error:
+        raise HTTPException(status_code=400, detail=error_description or error)
     # Validate state
     row = supabase.table("oauth_states").select("state").eq("state", state).execute()
     if not row.data:
-        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+        raise HTTPException(status_code=400, detail=f"Invalid OAuth state: {state[:8]}… not found in DB")
     supabase.table("oauth_states").delete().eq("state", state).execute()
 
     # Exchange code for tokens
@@ -236,6 +264,32 @@ async def supabase_webhook(payload: dict, background_tasks: BackgroundTasks):
 async def profit_and_loss(from_date: str = "2024-01-01", to_date: str = "2024-12-31"):
     data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_date}&toDate={to_date}")
     return data
+
+
+@app.get("/api/reports/monthly")
+async def monthly_summary():
+    """Returns last 6 months of P&L data for charts."""
+    from datetime import date
+    today = date.today()
+    months = []
+    for i in range(5, -1, -1):
+        # first day of month i months ago
+        month = (today.month - i - 1) % 12 + 1
+        year  = today.year - ((today.month - i - 1) // 12)
+        from_d = date(year, month, 1)
+        last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - __import__('datetime').timedelta(days=1)
+        data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
+        income = expenses = 0.0
+        for section in data.get("Reports", [{}])[0].get("Rows", []):
+            for row in section.get("Rows", []):
+                cells = row.get("Cells", [])
+                if not cells: continue
+                label = cells[0].get("Value", "").lower()
+                val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
+                if "total income" in label:             income = val
+                if "total operating expenses" in label:  expenses = val
+        months.append({"name": from_d.strftime("%b"), "revenue": income, "expenses": expenses})
+    return months
 
 
 @app.get("/api/reports/balance-sheet")
@@ -355,7 +409,7 @@ async def export_excel(report_type: str):
 
 @app.get("/api/invoices")
 async def get_invoices(status: str = "AUTHORISED"):
-    data = await _xero_get(f"Invoices?Statuses={status}&order=DueDateUTC DESC")
+    data = await _xero_get(f"Invoices?Statuses={status}&order=DueDate DESC")
     return data.get("Invoices", [])
 
 
