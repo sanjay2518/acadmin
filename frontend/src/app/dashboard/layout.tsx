@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Building2, FileText, CreditCard, LogOut 
+  Building2, FileText, CreditCard, Settings, LogOut 
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,6 +25,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard/billing" className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition">
             <CreditCard className="w-5 h-5" />
             <span>Billing</span>
+          </Link>
+          <Link href="/dashboard/settings" className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition">
+            <Settings className="w-5 h-5" />
+            <span>Settings</span>
           </Link>
         </nav>
         <div className="p-4 border-t border-gray-200">
