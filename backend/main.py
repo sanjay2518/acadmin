@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
+from pydantic import BaseModel
+from typing import Optional
 from supabase import create_client, Client
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -38,7 +40,7 @@ app = FastAPI(title="Wealcco API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,6 +117,36 @@ async def _xero_post(path: str, payload: dict) -> dict:
         )
     resp.raise_for_status()
     return resp.json()
+
+# ── Contact Submissions ───────────────────────────────────────────────────────
+
+class ContactIn(BaseModel):
+    name:    str
+    email:   str
+    phone:   Optional[str] = None
+    company: Optional[str] = None
+    service: Optional[str] = None
+    message: str
+
+@app.post("/api/contacts")
+def create_contact(body: ContactIn):
+    result = supabase.table("contact_submissions").insert({
+        "name":    body.name,
+        "email":   body.email,
+        "phone":   body.phone,
+        "company": body.company,
+        "service": body.service,
+        "message": body.message,
+        "status":  "new",
+    }).execute()
+    return {"success": True, "id": result.data[0]["id"] if result.data else None}
+
+
+@app.get("/api/contacts")
+def get_contacts():
+    result = supabase.table("contact_submissions").select("*").order("created_at", desc=True).execute()
+    return result.data
+
 
 # ── OAuth ─────────────────────────────────────────────────────────────────────
 XERO_SCOPES = (

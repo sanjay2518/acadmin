@@ -27,8 +27,22 @@ const ContactForm = ({ onSubmit }) => {
         setSubmitStatus(null);
 
         try {
+            // Save to Supabase DB via Python backend
+            await fetch('http://localhost:8000/api/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name:    formData.name,
+                    email:   formData.email,
+                    phone:   formData.phone,
+                    company: formData.company,
+                    service: formData.subject,
+                    message: formData.message,
+                }),
+            }).catch(err => console.error('DB save failed:', err));
+
             // Send admin notification
-            const adminResponse = await emailjs.send(
+            await emailjs.send(
                 'service_mzqdu0g',
                 'template_vokf2l1',
                 {
