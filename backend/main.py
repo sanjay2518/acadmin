@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
+from pydantic import BaseModel
+from typing import Optional
 from supabase import create_client, Client
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -38,7 +40,7 @@ app = FastAPI(title="Wealcco API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,6 +117,36 @@ async def _xero_post(path: str, payload: dict) -> dict:
         )
     resp.raise_for_status()
     return resp.json()
+
+# ── Contact Submissions ───────────────────────────────────────────────────────
+
+class ContactIn(BaseModel):
+    name:    str
+    email:   str
+    phone:   Optional[str] = None
+    company: Optional[str] = None
+    service: Optional[str] = None
+    message: str
+
+@app.post("/api/contacts")
+def create_contact(body: ContactIn):
+    result = supabase.table("contact_submissions").insert({
+        "name":    body.name,
+        "email":   body.email,
+        "phone":   body.phone,
+        "company": body.company,
+        "service": body.service,
+        "message": body.message,
+        "status":  "new",
+    }).execute()
+    return {"success": True, "id": result.data[0]["id"] if result.data else None}
+
+
+@app.get("/api/contacts")
+def get_contacts():
+    result = supabase.table("contact_submissions").select("*").order("created_at", desc=True).execute()
+    return result.data
+
 
 # ── OAuth ─────────────────────────────────────────────────────────────────────
 XERO_SCOPES = (
@@ -199,6 +231,24 @@ async def xero_callback(
     return RedirectResponse("http://localhost:3000/dashboard/reports?connected=true")
 
 
+@app.post("/api/auth/xero/logout")
+async def xero_logout():
+    """Revoke Xero tokens and clear them from Supabase."""
+    try:
+        tokens = _get_tokens()
+        # Revoke the token with Xero
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "https://identity.xero.com/connect/revocation",
+                headers={"Authorization": _basic_auth_header(), "Content-Type": "application/x-www-form-urlencoded"},
+                data={"token": tokens["refresh_token"], "token_type_hint": "refresh_token"},
+            )
+    except Exception:
+        pass  # still clear from DB even if revocation fails
+    supabase.table("xero_tokens").delete().neq("id", 0).execute()
+    return {"success": True}
+
+
 @app.get("/api/auth/xero/status")
 def xero_status():
     try:
@@ -260,40 +310,42 @@ async def supabase_webhook(payload: dict, background_tasks: BackgroundTasks):
 
 # ── Reports ───────────────────────────────────────────────────────────────────
 
+@app.get("/api/reports/monthly")
+async def monthly_report():
+    """Returns last 6 months revenue and expenses for the dashboard chart."""
+    from datetime import date, timedelta
+    today = date.today()
+    result = []
+    for i in range(5, -1, -1):
+        month = (today.month - i - 1) % 12 + 1
+        year  = today.year - ((today.month - i - 1) // 12)
+        from_d   = date(year, month, 1)
+        last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - timedelta(days=1)
+        try:
+            data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
+            revenue = expenses = 0.0
+            for section in data.get("Reports", [{}])[0].get("Rows", []):
+                for row in section.get("Rows", []):
+                    cells = row.get("Cells", [])
+                    if not cells: continue
+                    label = cells[0].get("Value", "").lower()
+                    val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
+                    if "total income" in label:            revenue  = val
+                    if "total operating expenses" in label: expenses = val
+        except Exception:
+            revenue = expenses = 0.0
+        result.append({"name": from_d.strftime("%b"), "revenue": revenue, "expenses": expenses})
+    return result
+
+
 @app.get("/api/reports/profit-and-loss")
-async def profit_and_loss(from_date: str = "2024-01-01", to_date: str = "2024-12-31"):
+async def profit_and_loss(from_date: str = "2023-01-01", to_date: str = "2023-12-31"):
     data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_date}&toDate={to_date}")
     return data
 
 
-@app.get("/api/reports/monthly")
-async def monthly_summary():
-    """Returns last 6 months of P&L data for charts."""
-    from datetime import date
-    today = date.today()
-    months = []
-    for i in range(5, -1, -1):
-        # first day of month i months ago
-        month = (today.month - i - 1) % 12 + 1
-        year  = today.year - ((today.month - i - 1) // 12)
-        from_d = date(year, month, 1)
-        last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - __import__('datetime').timedelta(days=1)
-        data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
-        income = expenses = 0.0
-        for section in data.get("Reports", [{}])[0].get("Rows", []):
-            for row in section.get("Rows", []):
-                cells = row.get("Cells", [])
-                if not cells: continue
-                label = cells[0].get("Value", "").lower()
-                val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
-                if "total income" in label:             income = val
-                if "total operating expenses" in label:  expenses = val
-        months.append({"name": from_d.strftime("%b"), "revenue": income, "expenses": expenses})
-    return months
-
-
 @app.get("/api/reports/balance-sheet")
-async def balance_sheet(date: str = "2024-12-31"):
+async def balance_sheet(date: str = "2023-12-31"):
     data = await _xero_get(f"Reports/BalanceSheet?date={date}")
     return data
 
@@ -313,9 +365,8 @@ async def aged_payables():
 
 @app.get("/api/dashboard/kpis")
 async def dashboard_kpis():
-    """Returns key financial figures for the dashboard overview."""
-    pl   = await _xero_get("Reports/ProfitAndLoss")
-    bs   = await _xero_get("Reports/BalanceSheet")
+    pl = await _xero_get("Reports/ProfitAndLoss?fromDate=2023-01-01&toDate=2023-12-31")
+    bs = await _xero_get("Reports/BalanceSheet?date=2023-12-31")
     return {"profit_and_loss": pl, "balance_sheet": bs}
 
 # ── Export Helpers ────────────────────────────────────────────────────────────
@@ -406,6 +457,27 @@ async def export_excel(report_type: str):
     )
 
 # ── Invoices ──────────────────────────────────────────────────────────────────
+
+@app.get("/api/users")
+async def get_users():
+    """Fetch contacts (users/clients) from Xero."""
+    data = await _xero_get("Contacts?includeArchived=false&order=Name ASC")
+    contacts = data.get("Contacts", [])
+    return [
+        {
+            "id":          c.get("ContactID"),
+            "name":        c.get("Name"),
+            "email":       c.get("EmailAddress"),
+            "phone":       c.get("Phones", [{}])[0].get("PhoneNumber", "") if c.get("Phones") else "",
+            "status":      c.get("ContactStatus"),
+            "is_customer": c.get("IsCustomer", False),
+            "is_supplier": c.get("IsSupplier", False),
+            "balance":     c.get("Balances", {}).get("AccountsReceivable", {}).get("Outstanding", 0),
+            "city":        c.get("Addresses", [{}])[0].get("City", "") if c.get("Addresses") else "",
+        }
+        for c in contacts
+    ]
+
 
 @app.get("/api/invoices")
 async def get_invoices(status: str = "AUTHORISED"):
