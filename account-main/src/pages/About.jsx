@@ -5,6 +5,7 @@ import Hero from '../components/Hero';
 import Stats from '../components/Stats';
 import TeamCard from '../components/TeamCard';
 import AnimateOnScroll from '../components/AnimateOnScroll';
+import { ABOUT_HERO, TIMELINE, getStats, COMPANY } from '../utils/companyData';
 import './About.css';
 
 // Team Member Images
@@ -15,12 +16,15 @@ import teamMember4 from '../assets/images/team-member-4.jpg';
 import teamMember5 from '../assets/images/team-member-5.jpg';
 
 const About = () => {
-    const stats = [
-        { value: 50, suffix: '+', label: 'Clients Served', icon: <Users size={26} color="#fff" strokeWidth={1.8} /> },
-        { value: 100, suffix: '%', label: 'Client Satisfaction', icon: <Star size={26} color="#fff" strokeWidth={1.8} /> },
-        { value: 6, suffix: '+', label: 'Team Members', icon: <UserCog size={26} color="#fff" strokeWidth={1.8} /> },
-        { value: 24, suffix: '/7', label: 'Support', icon: <Rocket size={26} color="#fff" strokeWidth={1.8} /> },
-    ];
+    const stats = getStats().map((s, i) => {
+        const icons = [
+            <Users size={26} color="#fff" strokeWidth={1.8} />,
+            <Star size={26} color="#fff" strokeWidth={1.8} />,
+            <UserCog size={26} color="#fff" strokeWidth={1.8} />,
+            <Rocket size={26} color="#fff" strokeWidth={1.8} />,
+        ];
+        return { ...s, icon: icons[i] ?? s.icon };
+    });
 
     const values = [
         {
@@ -96,13 +100,7 @@ const About = () => {
         },
     ];
 
-    const timeline = [
-        { year: '2026', title: 'Founded', description: 'Precision Accounting launched as a modern startup with a vision to provide innovative financial services.' },
-        { year: '2026', title: 'Team Assembly', description: 'Built a diverse team of experts in accounting, technology, and business operations.' },
-        { year: '2026', title: 'Digital-First Approach', description: 'Launched with cloud-based solutions and AI-powered financial tools from day one.' },
-        { year: '2026', title: 'First Clients', description: 'Started serving our first clients with personalized, tech-driven accounting solutions.' },
-        { year: 'Future', title: 'Growth Vision', description: 'Committed to becoming a trusted partner for businesses seeking modern financial excellence.' },
-    ];
+    const timeline = TIMELINE;
 
     // Scroll to section if hash is present in URL
     const location = useLocation();
@@ -122,9 +120,9 @@ const About = () => {
         <main className="about-page">
             <Hero
                 size="medium"
-                subtitle="About Precision Accounting"
-                title="A Fresh Start in Financial Excellence"
-                description="We are a passionate team committed to helping businesses achieve their financial goals through innovative solutions, modern technology, and personalized service."
+                subtitle={ABOUT_HERO.subtitle}
+                title={ABOUT_HERO.title}
+                description={ABOUT_HERO.description}
                 primaryCTA={{ label: "Meet Our Team", path: "/about#leadership" }}
                 secondaryCTA={{ label: "Our Services", path: "/services" }}
             />
@@ -215,7 +213,7 @@ const About = () => {
                 <div className="container">
                     <div className="section-header text-center">
                         <span className="section-subtitle">Our Journey</span>
-                        <h2>Building Our Vision in 2026</h2>
+                        <h2>Building Our Vision in {COMPANY.foundedYear}</h2>
                     </div>
 
                     <div className="timeline">

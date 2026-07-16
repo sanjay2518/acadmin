@@ -3,6 +3,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Search, Calendar, BarChart3, BookOpen } from 'lucide-react';
 import Hero from '../components/Hero';
 import InsightCard from '../components/InsightCard';
+import { COMPANY, getCurrentYear } from '../utils/companyData';
 import './Insights.css';
 
 // Import insight images
@@ -62,16 +63,18 @@ const Insights = () => {
         { value: 'industry', label: 'Industry Reports' },
     ];
 
+    const y = COMPANY.foundedYear;
+    const cy = getCurrentYear();
     const insights = [
         {
             id: 1,
-            title: '2026 Tax Planning Strategies for Startups',
+            title: `${cy} Tax Planning Strategies for Startups`,
             excerpt: 'Discover essential tax-saving strategies that can help your startup minimize liability and maximize growth potential in the new year.',
             category: 'tax',
             categoryLabel: 'Tax Update',
-            date: 'January 15, 2026',
+            date: `January 15, ${y}`,
             readTime: '5 min read',
-            path: '/insights/tax-planning-2026',
+            path: `/insights/tax-planning-${y}`,
             image: taxPlanningImg,
             featured: true
         },
@@ -81,7 +84,7 @@ const Insights = () => {
             excerpt: 'A comprehensive guide to the latest changes in audit requirements and how they affect your business compliance.',
             category: 'audit',
             categoryLabel: 'Audit',
-            date: 'January 12, 2026',
+            date: `January 12, ${y}`,
             readTime: '4 min read',
             path: '/insights/new-audit-standards',
             image: auditStandardsImg
@@ -92,20 +95,20 @@ const Insights = () => {
             excerpt: 'Expert tips on maintaining healthy cash flow and financial stability during your startup phase.',
             category: 'advisory',
             categoryLabel: 'Advisory',
-            date: 'January 10, 2026',
+            date: `January 10, ${y}`,
             readTime: '6 min read',
             path: '/insights/cfo-cash-flow',
             image: cashFlowImg
         },
         {
             id: 4,
-            title: 'Healthcare Industry Financial Trends 2026',
+            title: `Healthcare Industry Financial Trends ${cy}`,
             excerpt: 'Key financial trends shaping the healthcare industry and what they mean for your organization.',
             category: 'industry',
             categoryLabel: 'Industry Report',
-            date: 'January 8, 2026',
+            date: `January 8, ${y}`,
             readTime: '8 min read',
-            path: '/insights/healthcare-trends-2026',
+            path: `/insights/healthcare-trends-${cy}`,
             image: healthcareImg
         },
         {
@@ -114,7 +117,7 @@ const Insights = () => {
             excerpt: 'Expert strategies to maximize your R&D tax credits while maintaining full compliance with all requirements.',
             category: 'tax',
             categoryLabel: 'Tax Update',
-            date: 'January 6, 2026',
+            date: `January 6, ${y}`,
             readTime: '7 min read',
             path: '/insights/rd-tax-credit',
             image: webinarImg
@@ -122,10 +125,10 @@ const Insights = () => {
         {
             id: 6,
             title: 'State Tax Nexus: What You Need to Know',
-            excerpt: 'Understanding state tax nexus requirements in the post-Wayfair era and how to maintain multi-state compliance.',
+            excerpt: 'Understanding state tax nexus requirements and how to maintain multi-state compliance.',
             category: 'tax',
             categoryLabel: 'Tax Update',
-            date: 'January 5, 2026',
+            date: `January 5, ${y}`,
             readTime: '7 min read',
             path: '/insights/state-tax-nexus',
             image: stateTaxImg
@@ -136,18 +139,18 @@ const Insights = () => {
             excerpt: 'Essential due diligence practices to protect your interests in mergers and acquisitions.',
             category: 'advisory',
             categoryLabel: 'Advisory',
-            date: 'January 4, 2026',
+            date: `January 4, ${y}`,
             readTime: '6 min read',
             path: '/insights/ma-due-diligence',
             image: maDiligenceImg
         },
         {
             id: 8,
-            title: 'Technology Sector Financial Outlook',
+            title: `Technology Sector Financial Outlook ${cy}`,
             excerpt: 'Analysis of financial trends in the technology sector and strategic considerations for tech companies.',
             category: 'industry',
             categoryLabel: 'Industry Report',
-            date: 'January 3, 2026',
+            date: `January 3, ${y}`,
             readTime: '10 min read',
             path: '/insights/tech-outlook',
             image: techSectorImg
@@ -155,10 +158,10 @@ const Insights = () => {
         {
             id: 9,
             title: 'Internal Control Assessments: A Practical Guide',
-            excerpt: 'Step-by-step guidance on evaluating and strengthening your organization\'s internal controls.',
+            excerpt: "Step-by-step guidance on evaluating and strengthening your organisation's internal controls.",
             category: 'audit',
             categoryLabel: 'Audit',
-            date: 'January 2, 2026',
+            date: `January 2, ${y}`,
             readTime: '5 min read',
             path: '/insights/internal-controls',
             image: internalControlsImg
@@ -295,7 +298,7 @@ const Insights = () => {
                     <div className="resources-grid">
                         <div className="resource-card">
                             <div className="resource-icon"><Calendar size={32} color="#00D26A" strokeWidth={1.8} /></div>
-                            <h3>Tax Calendar 2026</h3>
+                            <h3>Tax Calendar {getCurrentYear()}</h3>
                             <p>Never miss an important tax deadline with our comprehensive calendar covering all federal and GST filing dates.</p>
                             <div className="resource-meta">
                                 <span className="resource-format">PDF</span>
