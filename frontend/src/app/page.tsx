@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, BarChart3, FileText, Shield } from "lucide-react";
 
-const API = "http://localhost:8000";
+const API = "https://acadmin-seven.vercel.app/";
 
 export default function Home() {
   const router = useRouter();

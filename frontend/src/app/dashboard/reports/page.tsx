@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { FileText, Link2, Download, CheckCircle2, Loader2 } from "lucide-react";
 
-const API = "http://localhost:8000";
+const API = "https://acadmin-seven.vercel.app/";
 
 const REPORTS = [
   { key: "profit-and-loss",  title: "Profit & Loss",     description: "Detailed breakdown of your revenue and expenses." },
