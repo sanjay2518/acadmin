@@ -273,6 +273,11 @@ const Header = () => {
 
       {/* Mobile Menu */}
       <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+        <button className="mobile-menu-close" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="22" height="22">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
         <div className="mobile-menu-content">
           {menuItems.map((item, index) => (
             <div key={index} className="mobile-nav-item">
@@ -315,6 +320,25 @@ const Header = () => {
             <Link to="/contact" className="btn btn-primary btn-lg">
               Contact Us
             </Link>
+            {portalUser ? (
+              <div className="mobile-portal-actions">
+                <Link to="/portal" className="portal-user-btn" style={{justifyContent:'center'}}>
+                  <User size={15} />
+                  {portalUser.name?.split(' ')[0]}
+                </Link>
+                <button className="portal-logout-btn" onClick={handlePortalLogout} title="Sign out">
+                  <LogOut size={15} />
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-outline btn-lg"
+                onClick={() => { setIsMobileMenuOpen(false); setIsLoginOpen(true); }}
+              >
+                <LogIn size={16} />
+                Client Login
+              </button>
+            )}
           </div>
         </div>
       </div>
