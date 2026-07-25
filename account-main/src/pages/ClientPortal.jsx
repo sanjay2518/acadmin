@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import './ClientPortal.css';
 
-const API = 'http://localhost:8000';
+const API = 'https://acadmin-seven.vercel.app';
 
 const fmt    = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const fmtFull= (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
