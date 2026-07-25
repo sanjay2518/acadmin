@@ -18,16 +18,12 @@ import TermsOfUse from './pages/TermsOfUse';
 import CookieSettings from './pages/CookieSettings';
 import Accessibility from './pages/Accessibility';
 import Chatbot from './components/Chatbot';
+import ClientPortal from './pages/ClientPortal';
 import './index.css';
 
-// Scroll to top on route change
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 };
 
@@ -58,6 +54,7 @@ function App() {
           <Route path="/terms" element={<TermsOfUse />} />
           <Route path="/cookies" element={<CookieSettings />} />
           <Route path="/accessibility" element={<Accessibility />} />
+          <Route path="/portal" element={<ClientPortal />} />
           {/* Fallback route */}
           <Route path="*" element={<Home />} />
         </Routes>

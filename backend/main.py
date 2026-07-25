@@ -155,6 +155,57 @@ def get_contacts():
     return result.data
 
 
+# ── User Auth ─────────────────────────────────────────────────────────────────
+
+class LoginIn(BaseModel):
+    email:    str
+    password: str
+
+@app.post("/api/auth/login")
+def user_login(body: LoginIn):
+    import hashlib
+    row = supabase.table("xero_users").select("*").eq("email", body.email).execute()
+    if not row.data:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    user = row.data[0]
+    # Compare SHA-256 hashed password
+    hashed = hashlib.sha256(body.password.encode()).hexdigest()
+    if user["password_hash"] != hashed:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return {
+        "success":          True,
+        "xero_contact_id":  user["xero_contact_id"],
+        "name":             user["name"],
+        "email":            user["email"],
+    }
+
+
+@app.get("/api/user/portal")
+async def user_portal(contact_id: str):
+    """Fetch invoices for a specific Xero contact."""
+    try:
+        invoices = await _xero_get(f"Invoices?ContactIDs={contact_id}&Statuses=AUTHORISED,PAID,VOIDED&order=DueDate DESC")
+        invoice_list = invoices.get("Invoices", [])
+    except Exception:
+        invoice_list = []
+
+    total = len(invoice_list)
+    paid = sum(1 for inv in invoice_list if inv.get("Status") == "PAID")
+    outstanding = sum(
+        float(inv.get("AmountDue", 0))
+        for inv in invoice_list
+        if inv.get("Status") == "AUTHORISED"
+    )
+    return {
+        "invoices": invoice_list,
+        "stats": {
+            "total": total,
+            "paid": paid,
+            "outstanding": round(outstanding, 2),
+        },
+    }
+
+
 # ── OAuth ─────────────────────────────────────────────────────────────────────
 XERO_SCOPES = (
     "offline_access openid profile email "
@@ -372,8 +423,8 @@ async def aged_payables():
 
 @app.get("/api/dashboard/kpis")
 async def dashboard_kpis():
-    pl = await _xero_get("Reports/ProfitAndLoss?fromDate=2023-01-01&toDate=2023-12-31")
-    bs = await _xero_get("Reports/BalanceSheet?date=2023-12-31")
+    pl = await _xero_get("Reports/ProfitAndLoss?fromDate=2026-01-01&toDate=2026-12-31")
+    bs = await _xero_get("Reports/BalanceSheet?date=2026-12-31")
     return {"profit_and_loss": pl, "balance_sheet": bs}
 
 # ── Export Helpers ────────────────────────────────────────────────────────────

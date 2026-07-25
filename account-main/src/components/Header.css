@@ -502,3 +502,62 @@
     background: var(--accent-green);
     color: var(--primary-white);
 }
+
+/* Portal user actions in header */
+.portal-user-actions {
+    display: none;
+    align-items: center;
+    gap: 4px;
+}
+
+@media (min-width: 768px) {
+    .portal-user-actions {
+        display: flex;
+    }
+}
+
+.portal-user-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--green-soft, #f0fdf4);
+    border: 1.5px solid var(--green, #00a36b);
+    border-radius: var(--radius-full, 999px);
+    color: var(--green, #00a36b);
+    font-size: var(--text-sm, 0.875rem);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+.portal-user-btn:hover {
+    background: var(--green, #00a36b);
+    color: #fff;
+}
+
+.portal-logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: #fef2f2;
+    border: 1.5px solid #fecaca;
+    border-radius: var(--radius-full, 999px);
+    color: #dc2626;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.portal-logout-btn:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+}
+
+/* My Reports nav link highlight */
+.nav-link-portal {
+    color: var(--green, #00a36b) !important;
+}
+.nav-link-portal:hover {
+    background: var(--green-soft, #f0fdf4) !important;
+}
