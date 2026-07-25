@@ -7,14 +7,16 @@ import {
 } from "recharts";
 import { Building2, TrendingUp, TrendingDown, DollarSign, Loader2, RefreshCw } from "lucide-react";
 
-const API = "https://acadmin-seven.vercel.app";
+const API = "https://acadmin-seven.vercel.app/";
 
 function extractKpiValue(report: any, label: string): number {
   try {
     for (const section of report?.Reports?.[0]?.Rows ?? []) {
-      for (const row of section?.Rows ?? []) {
+      // check SummaryRows and Rows inside sections
+      const rows = section?.Rows ?? [];
+      for (const row of rows) {
         const cells = row?.Cells ?? [];
-        if (cells[0]?.Value?.toLowerCase().includes(label.toLowerCase())) {
+        if (cells[0]?.Value?.toLowerCase() === label.toLowerCase()) {
           return parseFloat(cells[1]?.Value ?? "0") || 0;
         }
       }
@@ -57,10 +59,10 @@ export default function DashboardPage() {
 
   const pl  = kpis?.profit_and_loss;
   const bs  = kpis?.balance_sheet;
-  const revenue  = pl ? fmt(extractKpiValue(pl, "total income"))              : null;
-  const expenses = pl ? fmt(extractKpiValue(pl, "total operating expenses"))   : null;
-  const profit   = pl ? fmt(extractKpiValue(pl, "net profit"))                 : null;
-  const bank     = bs ? fmt(extractKpiValue(bs, "total bank"))                 : null;
+  const revenue  = pl ? fmt(extractKpiValue(pl, "Total Income"))             : null;
+  const expenses = pl ? fmt(extractKpiValue(pl, "Total Operating Expenses"))  : null;
+  const profit   = pl ? fmt(extractKpiValue(pl, "Net Profit"))                : null;
+  const bank     = bs ? fmt(extractKpiValue(bs, "Total Assets"))              : null;
 
   if (loading) {
     return (

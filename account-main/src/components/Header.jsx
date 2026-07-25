@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, Briefcase, BookOpen, Wallet, Target, Hospital, Monitor, Factory, Building2, ShoppingCart, Handshake } from 'lucide-react';
+import { BarChart3, FileText, Briefcase, BookOpen, Wallet, Target, Hospital, Monitor, Factory, Building2, ShoppingCart, Handshake, LogIn, LogOut, User } from 'lucide-react';
+import LoginModal from './LoginModal';
 import './Header.css';
 
 const Header = () => {
@@ -10,8 +11,31 @@ const Header = () => {
   const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [portalUser, setPortalUser]   = useState(() => {
+    const s = localStorage.getItem('portal_user');
+    return s ? JSON.parse(s) : null;
+  });
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Sync portalUser when login happens in same tab
+  useEffect(() => {
+    const check = () => {
+      const s = localStorage.getItem('portal_user');
+      setPortalUser(s ? JSON.parse(s) : null);
+    };
+    window.addEventListener('storage', check);
+    // Also poll on focus so same-tab login updates header
+    window.addEventListener('focus', check);
+    return () => { window.removeEventListener('storage', check); window.removeEventListener('focus', check); };
+  }, []);
+
+  const handlePortalLogout = () => {
+    localStorage.removeItem('portal_user');
+    setPortalUser(null);
+    navigate('/');
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -186,6 +210,13 @@ const Header = () => {
                   )}
                 </li>
               ))}
+              {portalUser && (
+                <li className="nav-item">
+                  <Link to="/portal" className="nav-link nav-link-portal">
+                    My Reports
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
 
@@ -205,6 +236,26 @@ const Header = () => {
             <Link to="/contact" className="btn btn-primary header-cta">
               Contact Us
             </Link>
+
+            {portalUser ? (
+              <div className="portal-user-actions">
+                <Link to="/portal" className="portal-user-btn">
+                  <User size={15} />
+                  {portalUser.name?.split(' ')[0]}
+                </Link>
+                <button className="portal-logout-btn" onClick={handlePortalLogout} title="Sign out">
+                  <LogOut size={15} />
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-outline header-cta"
+                onClick={() => setIsLoginOpen(true)}
+              >
+                <LogIn size={16} />
+                Client Login
+              </button>
+            )}
 
             {/* Mobile Menu Toggle */}
             <button
@@ -307,6 +358,8 @@ const Header = () => {
       {isMobileMenuOpen && (
         <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
       )}
+
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </>
   );
 };
