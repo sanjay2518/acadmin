@@ -1,9 +1,9 @@
 import hashlib
 
-name       = "Swift Courier Services"
-email      = "billing@swiftcourier.in"
-password   = "Scs@323232"
-contact_id = "c052e3b6-dc24-4088-b47d-a59c98f65d6e"
+name       = " user name "
+email      = "user mail id"
+password   = "user password"
+contact_id = "user contact Id "
 
 password_hash = hashlib.sha256(password.encode()).hexdigest()
 
