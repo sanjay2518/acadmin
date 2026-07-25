@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Wallet, Hospital, BookOpen, Palmtree, Briefcase, Home } from 'lucide-react';
 import Hero from '../components/Hero';
+import { COMPANY } from '../utils/companyData';
 import './Careers.css';
 
 const Careers = () => {
@@ -75,7 +76,7 @@ const Careers = () => {
                 size="medium"
                 subtitle="Join Our Team"
                 title="Build Your Career at Precision Accounting"
-                description="Join a team of passionate professionals who are committed to making a difference for our clients and communities."
+                description={`Join a team of passionate professionals committed to making a difference — growing together since ${COMPANY.foundedYear}.`}
                 primaryCTA={{ label: "View Open Positions", path: "#positions" }}
                 secondaryCTA={{ label: "Our Culture", path: "#culture" }}
             />
@@ -86,11 +87,11 @@ const Careers = () => {
                     <div className="why-join-content">
                         <div className="why-join-text">
                             <span className="section-subtitle">Why Precision</span>
-                            <h2>More Than a Job—A Career You'll Love</h2>
+                            <h2>More Than a Job — A Career You'll Love</h2>
                             <p>
-                                At Precision Accounting, we believe in investing in our people.
-                                We provide the resources, mentorship, and opportunities you need
-                                to grow your career and achieve your goals.
+                                At {COMPANY.name}, we believe in investing in our people.
+                                Since {COMPANY.foundedYear}, we've been building a culture where
+                                everyone has the resources, mentorship, and opportunities to grow.
                             </p>
                             <ul className="why-join-list">
                                 <li>Work with Fortune 500 clients and innovative startups</li>
@@ -283,7 +284,7 @@ const Careers = () => {
                     <div className="cta-content text-center">
                         <h2>Ready to Start Your Journey?</h2>
                         <p>
-                            Explore our open positions and take the first step toward an amazing career.
+                            Explore our open positions and take the first step toward a career at {COMPANY.name} — founded {COMPANY.foundedYear}, growing every day.
                         </p>
                         <Link to="#positions" className="btn btn-primary btn-lg">
                             View All Positions

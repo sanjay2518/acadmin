@@ -5,7 +5,7 @@ import { Building2, FileText, CreditCard, Settings, Users, LogOut } from 'lucide
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 
-const API = "http://localhost:8000";
+const API = "https://acadmin-seven.vercel.app";
 
 const NAV = [
   { href: "/dashboard",         label: "Dashboard", icon: Building2 },

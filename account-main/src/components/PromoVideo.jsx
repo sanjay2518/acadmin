@@ -377,7 +377,7 @@ const PromoVideo = () => {
                                             {[
                                                 { icon: Users, value: '50+', label: 'Happy Clients', color: '#00d26a' },
                                                 { icon: Clock, value: '24/7', label: 'Support', color: '#3b82f6' },
-                                                { icon: Award, value: '5+', label: 'Years Experience', color: '#f59e0b' },
+                                                { icon: Award, value: '2026', label: 'Year Founded', color: '#f59e0b' },
                                                 { icon: Globe, value: 'Pan India', label: 'Coverage', color: '#8b5cf6' },
                                             ].map((stat, i) => (
                                                 <div key={i} className="stat-block anim-item" style={{ animationDelay: `${0.3 + i * 0.15}s` }}>

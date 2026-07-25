@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Hero from '../components/Hero';
 import ServiceCard from '../components/ServiceCard';
@@ -8,6 +8,7 @@ import InsightCard from '../components/InsightCard';
 import AnimateOnScroll from '../components/AnimateOnScroll';
 import PromoVideo from '../components/PromoVideo';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { HOME_HERO, WHY_US_DESCRIPTION, INSIGHTS, getCurrentYear } from '../utils/companyData';
 import {
   BarChart3, FileText, Briefcase, BookOpen, Wallet, Target,
   ArrowRight, CheckCircle2, TrendingUp, Shield, Users, Award
@@ -87,9 +88,9 @@ const Home = () => {
   return (
     <div className="home">
       <Hero
-        title="Expert Accounting & Tax Solutions"
-        subtitle="Trusted Financial Partner"
-        description="Empowering businesses with precision accounting, strategic tax planning, and comprehensive financial advisory services."
+        title={HOME_HERO.title}
+        subtitle={HOME_HERO.subtitle}
+        description={HOME_HERO.description}
         primaryCTA={{ label: 'Get Started', path: '/contact' }}
         secondaryCTA={{ label: 'Our Services', path: '/services' }}
         size="large"
@@ -178,8 +179,7 @@ const Home = () => {
                 <span className="section-subtitle">Why Choose Us</span>
                 <h2>A Partner You Can Trust</h2>
                 <p>
-                  For over 15 years, we've helped businesses navigate complex financial
-                  landscapes with clarity, precision, and unwavering commitment to their success.
+                  {WHY_US_DESCRIPTION}
                 </p>
                 <Link to="/about" className="btn btn-primary btn-lg why-us-btn">
                   Learn More About Us
@@ -225,23 +225,23 @@ const Home = () => {
           <div className="insights-grid">
             <AnimateOnScroll animation="fade-up" delay={0.1}>
               <InsightCard
-                title="2025 Tax Planning Strategies"
-                category="Tax"
-                date="March 15, 2025"
+                title={INSIGHTS[0].title}
+                category={INSIGHTS[0].category}
+                date={INSIGHTS[0].date}
               />
             </AnimateOnScroll>
             <AnimateOnScroll animation="fade-up" delay={0.25}>
               <InsightCard
-                title="Financial Controls Best Practices"
-                category="Advisory"
-                date="March 10, 2025"
+                title={INSIGHTS[1].title}
+                category={INSIGHTS[1].category}
+                date={INSIGHTS[1].date}
               />
             </AnimateOnScroll>
             <AnimateOnScroll animation="fade-up" delay={0.4}>
               <InsightCard
-                title="Audit Readiness Guide"
-                category="Audit"
-                date="March 5, 2025"
+                title={INSIGHTS[2].title}
+                category={INSIGHTS[2].category}
+                date={INSIGHTS[2].date}
               />
             </AnimateOnScroll>
           </div>

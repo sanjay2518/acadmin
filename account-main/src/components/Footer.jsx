@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { COMPANY, getCurrentYear } from '../utils/companyData';
 import './Footer.css';
 
 const Footer = () => {
@@ -136,8 +137,8 @@ const Footer = () => {
                                 </span>
                             </Link>
                             <p className="footer-description">
-                                Trusted accounting and advisory services to help businesses achieve
-                                financial clarity and sustainable growth.
+                                Trusted accounting and advisory services helping businesses achieve
+                                financial clarity and sustainable growth — since {COMPANY.foundedYear}.
                             </p>
                             <div className="footer-contact-info">
                                 <div className="contact-item">
@@ -248,7 +249,7 @@ const Footer = () => {
                 <div className="container">
                     <div className="footer-bottom-content">
                         <p className="copyright">
-                            © {currentYear} Precision Accounting. All rights reserved.
+                            © {getCurrentYear()} {COMPANY.name}. All rights reserved. Founded {COMPANY.foundedYear}.
                         </p>
                         <div className="footer-legal">
                             <Link to="/privacy">Privacy Policy</Link>

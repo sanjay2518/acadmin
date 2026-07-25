@@ -25,9 +25,11 @@
 .form-group label {
     display: block;
     font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--gray-700);
+    font-weight: 700;
+    color: var(--accent-green-dark);
     margin-bottom: var(--space-2);
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
 }
 
 .form-group input,
@@ -37,9 +39,9 @@
     padding: var(--space-4);
     font-family: var(--font-primary);
     font-size: var(--text-base);
-    color: var(--primary-black);
+    color: #2d4a2d;
     background: var(--primary-white);
-    border: 2px solid var(--gray-300);
+    border: 2px solid var(--accent-green-mid);
     border-radius: var(--radius-lg);
     transition: all var(--transition-fast);
 }
@@ -49,7 +51,8 @@
 .form-group textarea:focus {
     outline: none;
     border-color: var(--accent-green);
-    box-shadow: 0 0 0 4px rgba(0, 210, 106, 0.1);
+    box-shadow: 0 0 0 4px rgba(60, 179, 113, 0.12);
+    background: var(--accent-green-pale);
 }
 
 .form-group input.error,
@@ -59,7 +62,7 @@
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-    color: var(--gray-400);
+    color: var(--gray-500);
 }
 
 .form-group select {
@@ -127,7 +130,7 @@
     flex-shrink: 0;
     width: 22px;
     height: 22px;
-    border: 2px solid var(--gray-300);
+    border: 2px solid var(--accent-green-mid);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
@@ -142,29 +145,33 @@
 
 .checkbox-label input:checked+.checkbox-custom::after {
     content: '✓';
-    color: var(--primary-black);
+    color: var(--primary-white);
     font-size: var(--text-sm);
     font-weight: bold;
 }
 
 .checkbox-label input:focus+.checkbox-custom {
-    box-shadow: 0 0 0 4px rgba(0, 210, 106, 0.1);
+    box-shadow: 0 0 0 4px rgba(60, 179, 113, 0.12);
 }
 
 /* Submit Button */
 .submit-btn {
     padding: 12px 24px;
-    background: #00D26A;
-    color: black;
+    background: var(--accent-green);
+    color: var(--primary-white);
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-md);
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
+    font-family: var(--font-display);
+    transition: all var(--transition-base);
 }
 
 .submit-btn:hover {
-    background: #00b85c;
+    background: var(--accent-green-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .submit-btn:disabled {
@@ -180,9 +187,9 @@
 }
 
 .form-message.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: var(--accent-green-pale);
+    color: var(--accent-green-dark);
+    border: 1px solid var(--accent-green-mid);
 }
 
 .form-message.error {
@@ -210,8 +217,9 @@
 .contact-form-success {
     text-align: center;
     padding: var(--space-12);
-    background: var(--gray-100);
+    background: var(--accent-green-pale);
     border-radius: var(--radius-xl);
+    border: 1px solid var(--accent-green-mid);
 }
 
 .success-icon {
@@ -229,7 +237,7 @@
 .success-icon svg {
     width: 40px;
     height: 40px;
-    color: var(--primary-black);
+    color: var(--primary-white);
 }
 
 .contact-form-success h3 {
@@ -243,8 +251,8 @@
 }
 
 .contact-form-success .response-note {
-    background: linear-gradient(135deg, var(--accent-green) 0%, #00b85c 100%);
-    color: var(--primary-black);
+    background: var(--gradient-primary);
+    color: var(--primary-white);
     padding: var(--space-4) var(--space-6);
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-4);

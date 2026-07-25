@@ -40,7 +40,14 @@ app = FastAPI(title="Wealcco API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://acadmin-ifi1.vercel.app",
+        "https://acadmin-seven.vercel.app",
+        "https://acadmin-ah6w.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -228,7 +235,7 @@ async def xero_callback(
     }).execute()
 
     # Redirect back to the admin frontend reports page
-    return RedirectResponse("http://localhost:3000/dashboard/reports?connected=true")
+    return RedirectResponse("https://acadmin-ifi1.vercel.app/dashboard/reports?connected=true")
 
 
 @app.post("/api/auth/xero/logout")

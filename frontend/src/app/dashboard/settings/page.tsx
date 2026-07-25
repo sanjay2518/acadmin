@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { CheckCircle, XCircle, ExternalLink, RefreshCw } from "lucide-react";
 
-const API = "http://localhost:8000";
+const API = "https://acadmin-seven.vercel.app";
 
 const REQUIRED_SCOPES = [
   { scope: "offline_access",                        description: "Keep connection alive (refresh tokens)" },
