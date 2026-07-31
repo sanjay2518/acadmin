@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/index.js",
-    "dev:full": "concurrently \"npm run dev\" \"npm run server\"",
+    "analytics": "node server/analytics.js",
+    "dev:full": "concurrently \"npm run dev\" \"npm run server\" \"npm run analytics\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -15,6 +16,7 @@
     "@emailjs/browser": "^4.4.1",
     "@supabase/supabase-js": "^2.110.2",
     "better-sqlite3": "^12.5.0",
+    "node-cron": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",

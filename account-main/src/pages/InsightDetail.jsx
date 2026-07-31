@@ -29,7 +29,7 @@ const InsightDetail = () => {
             category: 'Tax Update',
             date: 'January 15, 2026',
             readTime: '5 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: taxPlanningImg,
             excerpt: 'Discover essential tax-saving strategies that can help your startup minimize liability and maximize growth potential in the new year.',
             content: `
@@ -76,7 +76,7 @@ const InsightDetail = () => {
             category: 'Audit',
             date: 'January 12, 2026',
             readTime: '4 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: auditStandardsImg,
             excerpt: 'A comprehensive guide to the latest changes in audit requirements and how they affect your business compliance.',
             content: `
@@ -120,7 +120,7 @@ const InsightDetail = () => {
             category: 'Advisory',
             date: 'January 10, 2026',
             readTime: '6 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: cashFlowImg,
             excerpt: 'Expert tips on maintaining healthy cash flow and financial stability during your startup phase.',
             content: `
@@ -173,7 +173,7 @@ const InsightDetail = () => {
             category: 'Industry Report',
             date: 'January 8, 2026',
             readTime: '8 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: healthcareImg,
             excerpt: 'Key financial trends shaping the healthcare industry and what they mean for your organization.',
             content: `
@@ -237,7 +237,7 @@ const InsightDetail = () => {
             category: 'Tax Update',
             date: 'January 6, 2026',
             readTime: '7 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: webinarImg,
             excerpt: 'Expert strategies to maximize your R&D tax credits while maintaining full compliance with all requirements.',
             content: `
@@ -303,7 +303,7 @@ const InsightDetail = () => {
             category: 'Tax Update',
             date: 'January 5, 2026',
             readTime: '7 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: stateTaxImg,
             excerpt: 'Understanding state tax nexus requirements in the post-Wayfair era and how to maintain multi-state compliance.',
             content: `
@@ -357,7 +357,7 @@ const InsightDetail = () => {
             category: 'Advisory',
             date: 'January 4, 2026',
             readTime: '6 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: maDiligenceImg,
             excerpt: 'Essential due diligence practices to protect your interests in mergers and acquisitions.',
             content: `
@@ -426,7 +426,7 @@ const InsightDetail = () => {
             category: 'Industry Report',
             date: 'January 3, 2026',
             readTime: '10 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: techSectorImg,
             excerpt: 'Analysis of financial trends in the technology sector and strategic considerations for tech companies.',
             content: `
@@ -501,7 +501,7 @@ const InsightDetail = () => {
             category: 'Audit',
             date: 'January 2, 2026',
             readTime: '5 min read',
-            author: 'Precision Accounting Team',
+            author: 'Wealcco Team',
             image: internalControlsImg,
             excerpt: 'Step-by-step guidance on evaluating and strengthening your organization\'s internal controls.',
             content: `

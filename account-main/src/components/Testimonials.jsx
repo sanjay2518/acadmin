@@ -3,21 +3,21 @@ import './Testimonials.css';
 
 const defaultTestimonials = [
     {
-        text: "Precision Accounting has been instrumental in streamlining our financial operations. Their expertise in tax planning saved us significantly and their team's dedication is unmatched.",
+        text: "Wealcco has been instrumental in streamlining our financial operations. Their expertise in tax planning saved us significantly and their team's dedication is unmatched.",
         name: 'Rajesh Kumar',
         role: 'CEO',
         company: 'TechVentures India',
         rating: 5,
     },
     {
-        text: "The audit and assurance services provided by Precision Accounting gave us complete confidence in our financial statements. Their attention to detail is remarkable.",
+        text: "The audit and assurance services provided by Wealcco gave us complete confidence in our financial statements. Their attention to detail is remarkable.",
         name: 'Priya Sharma',
         role: 'CFO',
         company: 'GreenLeaf Exports',
         rating: 5,
     },
     {
-        text: "Working with Precision Accounting transformed how we handle our books. Their advisory services helped us scale from a startup to a mid-size enterprise seamlessly.",
+        text: "Working with Wealcco transformed how we handle our books. Their advisory services helped us scale from a startup to a mid-size enterprise seamlessly.",
         name: 'Arjun Patel',
         role: 'Founder',
         company: 'NovaBuild Construction',

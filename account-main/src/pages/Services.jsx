@@ -172,7 +172,7 @@ const Services = () => {
                     <div className="container">
                         <div className="section-header text-center">
                             <span className="section-subtitle">Why Choose Us</span>
-                            <h2>The Precision Advantage</h2>
+                            <h2>The Wealcco Advantage</h2>
                         </div>
 
                         <div className="benefits-grid">

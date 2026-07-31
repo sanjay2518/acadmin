@@ -202,3 +202,62 @@
     .cp-stat-val { font-size: 1rem; }
     .cp-section-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* Tab navigation */
+.cp-tabs {
+    background: #0f172a;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.cp-tabs-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    gap: 4px;
+}
+.cp-tab {
+    padding: 12px 20px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+}
+.cp-tab:hover  { color: #e2e8f0; }
+.cp-tab.active { color: #fff; border-bottom-color: #3b82f6; }
+
+/* Chart card extras (used in ClientPortal charts) */
+.cp-charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+}
+.cp-chart-card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 1.25rem;
+}
+.cp-chart-full  { width: 100%; }
+.cp-chart-title { font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; }
+.cp-chart-sub   { font-size: 0.75rem; color: #94a3b8; margin: 3px 0 1rem; }
+.cp-chart-body  { height: 220px; }
+.cp-chart-body-lg { height: 240px; }
+.cp-chart-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; font-size: 0.85rem; }
+
+.cp-ratio-wrap  { margin-top: 1rem; }
+.cp-ratio-bar-bg { height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.cp-ratio-bar-fill { height: 100%; background: linear-gradient(90deg, #2563eb, #16a34a); border-radius: 99px; transition: width 0.6s ease; }
+.cp-ratio-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.75rem; color: #64748b; }
+.cp-ratio-val { font-weight: 700; color: #0f172a; }
+
+.cp-tooltip { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.82rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.cp-tooltip-label { font-weight: 600; color: #374151; margin: 0 0 4px; }
+
+.cp-stat-icon.indigo { background: #eef2ff; color: #4f46e5; }
+
+@media (max-width: 768px) {
+    .cp-charts-grid { grid-template-columns: 1fr; }
+}

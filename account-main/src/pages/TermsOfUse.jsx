@@ -37,20 +37,19 @@ const TermsOfUse = () => {
                             <section id="acceptance">
                                 <h2>1. Acceptance of Terms</h2>
                                 <p>
-                                    By accessing or using the Precision Accounting website and services, you agree to be
+                                    By accessing or using the Wealcco website and services, you agree to be
                                     bound by these Terms of Use and all applicable laws and regulations. If you do not
                                     agree with any of these terms, you are prohibited from using or accessing our services.
                                 </p>
                                 <p>
-                                    These Terms of Use constitute a legally binding agreement between you and Precision
-                                    Accounting regarding your use of our website and professional accounting services.
+                                    These Terms of Use constitute a legally binding agreement between you and Wealcco regarding your use of our website and professional accounting services.
                                 </p>
                             </section>
 
                             <section id="services">
                                 <h2>2. Our Services</h2>
                                 <p>
-                                    Precision Accounting provides professional accounting, tax preparation, financial advisory,
+                                    Wealcco provides professional accounting, tax preparation, financial advisory,
                                     and related services. Our services include but are not limited to:
                                 </p>
                                 <ul>
@@ -87,7 +86,7 @@ const TermsOfUse = () => {
                                 <h2>4. Intellectual Property</h2>
                                 <p>
                                     All content on our website, including text, graphics, logos, images, audio clips,
-                                    digital downloads, and software, is the property of Precision Accounting or its
+                                    digital downloads, and software, is the property of Wealcco or its
                                     content suppliers and is protected by international copyright laws.
                                 </p>
                                 <p>You may not:</p>
@@ -134,7 +133,7 @@ const TermsOfUse = () => {
                             <section id="limitation">
                                 <h2>7. Limitation of Liability</h2>
                                 <p>
-                                    To the fullest extent permitted by law, Precision Accounting shall not be liable
+                                    To the fullest extent permitted by law, Wealcco shall not be liable
                                     for any indirect, incidental, special, consequential, or punitive damages, including
                                     but not limited to:
                                 </p>
@@ -153,7 +152,7 @@ const TermsOfUse = () => {
                             <section id="indemnification">
                                 <h2>8. Indemnification</h2>
                                 <p>
-                                    You agree to indemnify, defend, and hold harmless Precision Accounting, its officers,
+                                    You agree to indemnify, defend, and hold harmless Wealcco, its officers,
                                     directors, employees, agents, and affiliates from and against any claims, liabilities,
                                     damages, losses, costs, or expenses (including reasonable attorneys' fees) arising out of:
                                 </p>
@@ -207,7 +206,7 @@ const TermsOfUse = () => {
                                     If you have any questions about these Terms of Use, please contact us:
                                 </p>
                                 <div className="contact-info-box">
-                                    <p><strong>Precision Accounting</strong></p>
+                                    <p><strong>Wealcco</strong></p>
                                     <p>56, New Layal Pur, Dixit Gali, Delhi-51</p>
                                     <p>Email: <a href="mailto:reliableprofessionals.co@gmail.com">reliableprofessionals.co@gmail.com</a></p>
                                     <p>Phone: <a href="tel:+918920473074">+91 8920473074</a></p>

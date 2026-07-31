@@ -6,7 +6,7 @@ const Chatbot = () => {
     const [messages, setMessages] = useState([
         {
             type: 'bot',
-            text: "Hello! 👋 Welcome to Precision Accounting. I'm your AI assistant. How can I help you today?",
+            text: "Hello! 👋 Welcome to Wealcco. I'm your AI assistant. How can I help you today?",
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
     ]);
@@ -78,7 +78,7 @@ const Chatbot = () => {
             hours: 'Monday-Friday: 9 AM - 6 PM, Saturday: 10 AM - 2 PM'
         },
         company: {
-            name: 'Precision Accounting',
+            name: 'Wealcco',
             tagline: 'Precision in Every Number. Excellence in Every Solution.',
             team: ['Athrav Kumar', 'Padmana Chopra', 'Paras Gupta', 'Sanjay A', 'Tasleem Shah']
         }
@@ -210,7 +210,7 @@ const Chatbot = () => {
             const greetings = [
                 "Hello! 👋 Great to connect with you! I'm here to help with any questions about our accounting and financial services. What would you like to know?",
                 "Hi there! 😊 Welcome! I'm ready to assist you with information about our services, pricing, or help schedule a consultation. How can I help?",
-                "Hey! 👋 Thanks for reaching out to Precision Accounting. I'm your AI assistant - ask me anything about our services!"
+                "Hey! 👋 Thanks for reaching out to Wealcco. I'm your AI assistant - ask me anything about our services!"
             ];
             response = greetings[Math.floor(Math.random() * greetings.length)];
         }
@@ -246,7 +246,7 @@ const Chatbot = () => {
             response = "**Business Hours** 🕐\n\n📅 **Monday - Friday:** 9:00 AM - 6:00 PM\n📅 **Saturday:** 10:00 AM - 2:00 PM\n📅 **Sunday:** Closed\n\n📧 Email support available 24/7!\n📱 For urgent matters, call: +91 8920473074\n\nWould you like to schedule an appointment?";
         }
         else if (intents.team >= 5) {
-            response = "**Our Team** 👥\n\nPrecision Accounting has a dedicated team of professionals:\n\n👨‍💼 **Athrav Kumar** - Accounting & Finance Specialist\n👩‍💼 **Padmana Chopra** - Operations Head\n👨‍💻 **Paras Gupta** - Software Engineer\n👨‍💻 **Sanjay A** - Full Stack Developer\n👩‍💼 **Tasleem Shah** - Lead Generation & Admin\n\nVisit our About page to learn more about each team member!";
+            response = "**Our Team** 👥\n\nWealcco has a dedicated team of professionals:\n\n👨‍💼 **Athrav Kumar** - Accounting & Finance Specialist\n👩‍💼 **Padmana Chopra** - Operations Head\n👨‍💻 **Paras Gupta** - Software Engineer\n👨‍💻 **Sanjay A** - Full Stack Developer\n👩‍💼 **Tasleem Shah** - Lead Generation & Admin\n\nVisit our About page to learn more about each team member!";
         }
         else if (intents.careers >= 5) {
             response = "**Join Our Team** 🚀\n\nWe're always looking for talented professionals!\n\n**Open Positions:**\n• Chartered Accountants\n• Tax Consultants\n• Audit Associates\n• Software Developers\n\n📧 Send your resume to: reliableprofessionals.co@gmail.com\n\nVisit our Careers page for current openings!";
@@ -353,7 +353,7 @@ const Chatbot = () => {
                             <span>◆</span>
                         </div>
                         <div className="chatbot-header-text">
-                            <h4>Precision AI Assistant</h4>
+                            <h4>Wealcco AI Assistant</h4>
                             <span className="chatbot-status">
                                 <span className="status-dot"></span>
                                 Online • Instant Response

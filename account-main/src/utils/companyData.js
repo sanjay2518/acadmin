@@ -26,10 +26,10 @@ export const getYearsOperating = () => {
 export const getCurrentYear = () => new Date().getFullYear();
 
 export const COMPANY = {
-    name: 'Precision Accounting',
+    name: 'Wealcco',
     foundedYear: FOUNDED_YEAR,
     tagline: 'Expert Accounting & Tax Solutions',
-    email: 'hello@precisionaccounting.com',
+    email: 'hello@wealcco.com',
     phone: '+1 (555) 000-0000',
     address: 'New Delhi, India',
 };
@@ -92,7 +92,7 @@ export const TIMELINE = [
     {
         year: `${FOUNDED_YEAR}`,
         title: 'Founded',
-        description: 'Precision Accounting launched with a vision to deliver modern, tech-driven financial services.',
+        description: 'Wealcco launched with a vision to deliver modern, tech-driven financial services.',
     },
     {
         year: `${FOUNDED_YEAR}`,
@@ -127,7 +127,7 @@ export const HOME_HERO = {
 };
 
 export const ABOUT_HERO = {
-    subtitle: 'About Precision Accounting',
+    subtitle: 'About Wealcco',
     title: 'A Fresh Start in Financial Excellence',
     description: `Founded in ${FOUNDED_YEAR}, we are a passionate team committed to helping businesses achieve their financial goals through innovative solutions, modern technology, and personalised service.`,
 };

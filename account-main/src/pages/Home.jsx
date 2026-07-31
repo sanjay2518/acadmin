@@ -269,7 +269,7 @@ const Home = () => {
             <div className="cta-card">
               <div className="cta-content">
                 <h2>Ready to Transform Your Financial Strategy?</h2>
-                <p>Let's have a conversation about how Precision Accounting can drive your business forward.</p>
+                <p>Let's have a conversation about how Wealcco can drive your business forward.</p>
                 <div className="cta-actions">
                   <Link to="/contact" className="btn btn-primary btn-lg">
                     Schedule a Consultation

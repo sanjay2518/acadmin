@@ -148,8 +148,7 @@ const Header = () => {
           <Link to="/" className="logo">
             <span className="logo-icon">◆</span>
             <span className="logo-text">
-              <span className="logo-primary">Precision</span>
-              <span className="logo-secondary">Accounting</span>
+              <span className="logo-primary">Wealcco</span>
             </span>
           </Link>
 
@@ -212,7 +211,7 @@ const Header = () => {
               ))}
               {portalUser && (
                 <li className="nav-item">
-                  <Link to="/portal" className="nav-link nav-link-portal">
+                  <Link to="/portal/analytics" className="nav-link nav-link-portal">
                     My Reports
                   </Link>
                 </li>

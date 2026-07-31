@@ -56,7 +56,7 @@ const About = () => {
             image: teamMember1,
             bio: 'I work in the field of accounting and finance, handling financial records, reporting, and documentation work. I believe in doing my work with clarity, honesty, and consistency rather than relying on shortcuts. I focus on keeping records accurate, understanding the logic behind numbers, and improving steadily through regular practice. Calm, disciplined, and detail-oriented by nature, I also have a creative side in writing and visual storytelling, which helps me communicate ideas clearly. I aim to grow into someone people can genuinely trust with their financial work.',
             linkedin: '#',
-            email: 'sanjay@precisionaccounting.com'
+            email: 'sanjay@wealcco.com'
         },
         {
             name: 'Padmana Chopra',
@@ -64,7 +64,7 @@ const About = () => {
             image: teamMember5,
             bio: 'Results-driven Accounting and Finance professional with a strong command over financial reporting, budgeting, forecasting, and compliance. Dedicated to transforming numbers into strategic business intelligence. With expertise in cost optimization, profit analysis, and operational financial control, I streamline accounting workflows, strengthen internal systems, and ensure data accuracy that drives confident decision-making. Passionate about financial strategy, automation, and scalable operations, I align financial precision with business growth—building systems that enhance transparency, efficiency, and long-term sustainability. As Operations Head, I don\'t just manage finances—I engineer financial excellence that powers performance, trust, and measurable success.',
             linkedin: '#',
-            email: 'padmana@precisionaccounting.com'
+            email: 'padmana@wealcco.com'
         },
         {
             name: 'Paras Gupta',
@@ -88,7 +88,7 @@ const About = () => {
             image: teamMember2,
             bio: 'Provides reliable support in lead generation, virtual assistance, and administrative operations. Responsible for prospect research, data collection and verification, CRM-ready lead preparation, calendar and email support, and day-to-day administrative tasks to help the firm operate efficiently and connect with potential clients.',
             linkedin: '#',
-            email: 'tasleem@precisionaccounting.com'
+            email: 'tasleem@wealcco.com'
         },
         {
             name: 'Nikhil',
@@ -96,7 +96,7 @@ const About = () => {
             image: null,
             bio: 'A Chartered Accountant with a relentless focus on precision, compliance, and business growth. Helps startups, founders, freelancers, and international clients bring clarity to their finances and confidence to their decisions.\n\nExpertise spans accounting, taxation, GST, audits, and corporate compliances—delivered with a strong commercial mindset. Doesn\'t just prepare numbers; interprets them, challenges them, and turns them into insights that actually drive results.\n\nBacked by advanced skills in Excel, automation, and Power BI, combines financial expertise with technology to deliver fast, accurate, and decision-ready reporting.\n\nClients work with Nikhil for one reason: reliability without excuses. Operates as a long-term financial partner—proactive, detail-obsessed, and always ahead of deadlines.\n\nIf you want your finances handled with absolute seriousness and strategic intent, you\'re in the right place.',
             linkedin: '#',
-            email: 'nikhil@precisionaccounting.com'
+            email: 'nikhil@wealcco.com'
         },
     ];
 
@@ -136,7 +136,7 @@ const About = () => {
                                 <span className="section-subtitle">Our Mission</span>
                                 <h2>Empowering Businesses Through Financial Clarity</h2>
                                 <p>
-                                    At Precision Accounting, our mission is to provide exceptional accounting,
+                                    At Wealcco, our mission is to provide exceptional accounting,
                                     tax, and advisory services that empower startups and growing businesses to make
                                     informed decisions and achieve sustainable growth.
                                 </p>
