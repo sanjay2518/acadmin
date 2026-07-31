@@ -31,7 +31,7 @@ const Accessibility = () => {
                             <section id="commitment">
                                 <h2>Our Commitment to Accessibility</h2>
                                 <p>
-                                    Precision Accounting is committed to ensuring digital accessibility for people
+                                    Wealcco is committed to ensuring digital accessibility for people
                                     with disabilities. We are continually improving the user experience for everyone
                                     and applying the relevant accessibility standards.
                                 </p>
@@ -149,7 +149,7 @@ const Accessibility = () => {
                             <section id="feedback">
                                 <h2>Feedback</h2>
                                 <p>
-                                    We welcome your feedback on the accessibility of the Precision Accounting website.
+                                    We welcome your feedback on the accessibility of the Wealcco website.
                                     If you encounter any accessibility barriers or have suggestions for improvement,
                                     please let us know.
                                 </p>

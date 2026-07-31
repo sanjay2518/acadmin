@@ -34,7 +34,7 @@ const PrivacyPolicy = () => {
                             <section id="introduction">
                                 <h2>1. Introduction</h2>
                                 <p>
-                                    Precision Accounting ("we," "our," or "us") is committed to protecting your privacy.
+                                    Wealcco ("we," "our," or "us") is committed to protecting your privacy.
                                     This Privacy Policy explains how we collect, use, disclose, and safeguard your information
                                     when you visit our website or use our accounting and financial services.
                                 </p>
@@ -159,10 +159,7 @@ const PrivacyPolicy = () => {
                                     If you have any questions about this Privacy Policy or our data practices, please contact us:
                                 </p>
                                 <div className="contact-info-box">
-                                    <p><strong>Precision Accounting</strong></p>
-                                    <p>56, New Layal Pur, Dixit Gali, Delhi-51</p>
-                                    <p>Email: <a href="mailto:reliableprofessionals.co@gmail.com">reliableprofessionals.co@gmail.com</a></p>
-                                    <p>Phone: <a href="tel:+918920473074">+91 8920473074</a></p>
+                                    <p><strong>Wealcco</strong></p>
                                 </div>
                             </section>
                         </div>

@@ -36,10 +36,10 @@ const Search = () => {
         { type: 'Insight', title: 'R&D Tax Credit Maximization', description: 'Strategies to maximize your R&D tax credits while maintaining compliance.', path: '/insights', keywords: ['R&D', 'tax credit', 'research and development'] },
 
         // Pages
-        { type: 'Page', title: 'About Us', description: 'Learn about Precision Accounting and our team of dedicated professionals.', path: '/about', keywords: ['about', 'company', 'team', 'history'] },
+        { type: 'Page', title: 'About Us', description: 'Learn about Wealcco and our team of dedicated professionals.', path: '/about', keywords: ['about', 'company', 'team', 'history'] },
         { type: 'Page', title: 'Our Leadership', description: 'Meet our experienced partners and leadership team.', path: '/about#leadership', keywords: ['leadership', 'partners', 'executives', 'team'] },
         { type: 'Page', title: 'Our Values', description: 'Discover the principles that guide our work and relationships.', path: '/about#values', keywords: ['values', 'integrity', 'excellence', 'principles'] },
-        { type: 'Page', title: 'Careers', description: 'Explore career opportunities at Precision Accounting.', path: '/careers', keywords: ['careers', 'jobs', 'employment', 'hiring', 'work'] },
+        { type: 'Page', title: 'Careers', description: 'Explore career opportunities at Wealcco.', path: '/careers', keywords: ['careers', 'jobs', 'employment', 'hiring', 'work'] },
         { type: 'Page', title: 'Open Positions', description: 'View our current job openings and apply today.', path: '/careers#positions', keywords: ['jobs', 'positions', 'openings', 'apply'] },
         { type: 'Page', title: 'Contact Us', description: 'Get in touch with our team for questions or consultations.', path: '/contact', keywords: ['contact', 'phone', 'email', 'address', 'location'] },
 

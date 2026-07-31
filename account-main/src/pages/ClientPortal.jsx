@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
     FileText, Loader2, CheckCircle2, Clock, AlertCircle, DollarSign, TrendingUp
 } from 'lucide-react';
@@ -104,6 +104,9 @@ export default function ClientPortal() {
 
     if (!user) return null;
 
+    // Tab nav
+    const location = useLocation();
+
     const filtered     = filter === 'ALL' ? invoices : invoices.filter(i => filter === 'OVERDUE' ? i.IsOverdue : i.Status === filter);
     const paidCount    = invoices.filter(i => i.Status === 'PAID').length;
     const overdueCount = invoices.filter(i => i.IsOverdue).length;
@@ -128,6 +131,14 @@ export default function ClientPortal() {
                         <h1 className="cp-welcome">Welcome back, {user.name}</h1>
                         <p className="cp-email">{user.email}</p>
                     </div>
+                </div>
+            </div>
+
+            {/* Tab nav */}
+            <div className="cp-tabs">
+                <div className="cp-tabs-inner">
+                    <Link to="/portal"           className={`cp-tab ${location.pathname === '/portal'           ? 'active' : ''}`}>Invoices</Link>
+                    <Link to="/portal/analytics" className={`cp-tab ${location.pathname === '/portal/analytics' ? 'active' : ''}`}>Analytics</Link>
                 </div>
             </div>
 

@@ -47,6 +47,8 @@ app.add_middleware(
         "https://acadmin-ifi1.vercel.app",
         "https://acadmin-seven.vercel.app",
         "https://acadmin-ah6w.vercel.app",
+        "http://localhost:5174",
+        "http://localhost:5175",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -136,7 +138,7 @@ class ContactIn(BaseModel):
     message: str
 
 @app.post("/api/contacts")
-def create_contact(body: ContactIn):
+async def create_contact(body: ContactIn):
     result = supabase.table("contact_submissions").insert({
         "name":    body.name,
         "email":   body.email,
@@ -150,7 +152,7 @@ def create_contact(body: ContactIn):
 
 
 @app.get("/api/contacts")
-def get_contacts():
+async def get_contacts():
     result = supabase.table("contact_submissions").select("*").order("created_at", desc=True).execute()
     return result.data
 
@@ -162,7 +164,7 @@ class LoginIn(BaseModel):
     password: str
 
 @app.post("/api/auth/login")
-def user_login(body: LoginIn):
+async def user_login(body: LoginIn):
     import hashlib
     row = supabase.table("xero_users").select("*").eq("email", body.email).execute()
     if not row.data:
@@ -211,10 +213,9 @@ XERO_SCOPES = (
     "offline_access openid profile email "
     "accounting.settings.read "
     "accounting.contacts.read "
-    "accounting.invoices.read "
-    "accounting.reports.aged.read "
-    "accounting.reports.balancesheet.read "
-    "accounting.reports.profitandloss.read"
+    "accounting.transactions.read "
+    "accounting.reports.read "
+    "accounting.budgets.read"
 )
 
 @app.get("/api/auth/xero/login")
@@ -308,7 +309,7 @@ async def xero_logout():
 
 
 @app.get("/api/auth/xero/status")
-def xero_status():
+async def xero_status():
     try:
         _get_tokens()
         return {"connected": True}
@@ -365,6 +366,204 @@ async def supabase_webhook(payload: dict, background_tasks: BackgroundTasks):
     if record:
         background_tasks.add_task(_sync_customer_to_xero, record)
     return {"status": "accepted"}
+
+# ── Analytics ────────────────────────────────────────────────────────────────
+import re
+from datetime import date, timedelta
+
+def _parse_xero_date(val: str) -> date:
+    """Parse Xero /Date(ms)/ or ISO string to date."""
+    if not val:
+        return date.today()
+    ms = re.search(r"/Date\((\d+)", val)
+    if ms:
+        return date.fromtimestamp(int(ms.group(1)) / 1000)
+    try:
+        return date.fromisoformat(val[:10])
+    except Exception:
+        return date.today()
+
+
+def _age_bucket(days: int) -> str:
+    if days <= 0:  return "current"
+    if days <= 30: return "1-30"
+    if days <= 60: return "31-60"
+    return "60+"
+
+
+def _bucket_invoices(invoices: list, today: date) -> list:
+    contacts: dict = {}
+    for inv in invoices:
+        due  = _parse_xero_date(inv.get("DueDateString") or inv.get("DueDate", ""))
+        days = (today - due).days
+        bkt  = _age_bucket(days)
+        name = inv.get("Contact", {}).get("Name", "Unknown")
+        if name not in contacts:
+            contacts[name] = {"contact": name, "current": 0.0, "1-30": 0.0, "31-60": 0.0, "60+": 0.0, "total": 0.0}
+        amt = float(inv.get("AmountDue", 0))
+        contacts[name][bkt]     += amt
+        contacts[name]["total"] += amt
+    return sorted(contacts.values(), key=lambda x: -x["total"])
+
+
+@app.get("/api/analytics/aged-receivables")
+async def analytics_aged_receivables():
+    today = date.today()
+    data  = await _xero_get("Invoices?Statuses=AUTHORISED&Type=ACCREC&order=DueDate DESC")
+    return _bucket_invoices(data.get("Invoices", []), today)
+
+
+@app.get("/api/analytics/aged-payables")
+async def analytics_aged_payables():
+    today = date.today()
+    data  = await _xero_get("Invoices?Statuses=AUTHORISED&Type=ACCPAY&order=DueDate DESC")
+    return _bucket_invoices(data.get("Invoices", []), today)
+
+
+@app.get("/api/analytics/cashflow")
+async def analytics_cashflow():
+    today  = date.today()
+    result = []
+    for i in range(11, -1, -1):
+        month    = (today.month - i - 1) % 12 + 1
+        year     = today.year - ((today.month - i - 1) // 12)
+        from_d   = date(year, month, 1)
+        last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - timedelta(days=1)
+        inflow = outflow = 0.0
+        try:
+            data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
+            for section in data.get("Reports", [{}])[0].get("Rows", []):
+                for row in section.get("Rows", []):
+                    cells = row.get("Cells", [])
+                    if not cells: continue
+                    label = cells[0].get("Value", "").lower()
+                    val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
+                    if "total income" in label:             inflow  = val
+                    if "total operating expenses" in label: outflow = abs(val)
+        except Exception:
+            pass
+        result.append({"month": from_d.strftime("%b %y"), "inflow": round(inflow, 2), "outflow": round(outflow, 2), "net": round(inflow - outflow, 2)})
+    return result
+
+
+@app.get("/api/analytics/vat")
+async def analytics_vat():
+    today   = date.today()
+    periods = []
+    for q in range(3, -1, -1):
+        # compute quarter start/end
+        cur_q      = (today.month - 1) // 3
+        target_q   = cur_q - q
+        year_off   = 0
+        while target_q < 0:
+            target_q += 4
+            year_off -= 1
+        q_year       = today.year + year_off
+        q_start_mon  = target_q * 3 + 1
+        q_end_mon    = q_start_mon + 2
+        from_d       = date(q_year, q_start_mon, 1)
+        last_day     = (date(q_year, q_end_mon % 12 + 1, 1) if q_end_mon < 12 else date(q_year + 1, 1, 1)) - timedelta(days=1)
+        vat_collected = vat_paid = 0.0
+        try:
+            sales = await _xero_get(f"Invoices?Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
+            for inv in sales.get("Invoices", []):
+                for li in inv.get("LineItems", []):
+                    vat_collected += float(li.get("TaxAmount", 0))
+        except Exception:
+            pass
+        try:
+            bills = await _xero_get(f"Invoices?Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
+            for inv in bills.get("Invoices", []):
+                for li in inv.get("LineItems", []):
+                    vat_paid += float(li.get("TaxAmount", 0))
+        except Exception:
+            pass
+        periods.append({
+            "period":        f"Q{target_q + 1} {q_year}",
+            "vat_collected": round(vat_collected, 2),
+            "vat_paid":      round(vat_paid, 2),
+            "net_vat":       round(vat_collected - vat_paid, 2),
+        })
+    return periods
+
+
+@app.get("/api/analytics/top")
+async def analytics_top():
+    today  = date.today()
+    from_d = date(today.year, 1, 1)
+    customers: dict = {}
+    try:
+        sales = await _xero_get(f"Invoices?Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
+        for inv in sales.get("Invoices", []):
+            name = inv.get("Contact", {}).get("Name", "Unknown")
+            customers[name] = customers.get(name, 0.0) + float(inv.get("Total", 0))
+    except Exception:
+        pass
+    expenses: dict = {}
+    try:
+        bills = await _xero_get(f"Invoices?Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
+        for inv in bills.get("Invoices", []):
+            for li in inv.get("LineItems", []):
+                cat = li.get("Description") or li.get("AccountCode") or "Other"
+                expenses[cat] = expenses.get(cat, 0.0) + float(li.get("LineAmount", 0))
+    except Exception:
+        pass
+    return {
+        "top_customers": sorted([{"name": k, "value": round(v, 2)} for k, v in customers.items()], key=lambda x: -x["value"])[:10],
+        "top_expenses":  sorted([{"name": k, "value": round(v, 2)} for k, v in expenses.items()],  key=lambda x: -x["value"])[:10],
+    }
+
+
+@app.get("/api/analytics/budget")
+async def analytics_budget():
+    today  = date.today()
+    from_d = date(today.year, 1, 1)
+    budget = actual = None
+    try:
+        budget = await _xero_get(f"Reports/BudgetSummary?date={today}&periods=12&timeframe=1")
+    except Exception:
+        pass
+    try:
+        actual = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={today}")
+    except Exception:
+        pass
+    return {"budget": budget, "actual": actual}
+
+
+@app.post("/api/analytics/sync")
+async def analytics_sync():
+    """Fetch all analytics from Xero and cache in Supabase. Call nightly."""
+    import asyncio
+    aged_rec, aged_pay, cashflow, vat, top = await asyncio.gather(
+        analytics_aged_receivables(),
+        analytics_aged_payables(),
+        analytics_cashflow(),
+        analytics_vat(),
+        analytics_top(),
+        return_exceptions=True,
+    )
+    saved = []
+    for key, val in [("aged_receivables", aged_rec), ("aged_payables", aged_pay),
+                     ("cashflow", cashflow), ("vat", vat), ("top", top)]:
+        if isinstance(val, Exception):
+            continue
+        supabase.table("analytics_cache").upsert(
+            {"key": key, "data": val, "updated_at": datetime.utcnow().isoformat()}
+        ).execute()
+        saved.append(key)
+    return {"synced": saved}
+
+
+@app.get("/api/analytics/cached/{key}")
+async def analytics_cached(key: str):
+    try:
+        row = supabase.table("analytics_cache").select("data,updated_at").eq("key", key).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache read failed: {e}")
+    if not row.data:
+        raise HTTPException(status_code=404, detail="No cached data — run /api/analytics/sync first.")
+    return {"data": row.data[0]["data"], "updated_at": row.data[0]["updated_at"]}
+
 
 # ── Reports ───────────────────────────────────────────────────────────────────
 
@@ -544,7 +743,7 @@ async def get_invoices(status: str = "AUTHORISED"):
 
 
 @app.get("/")
-def root():
+async def root():
     return {"status": "ok", "message": "Wealcco API is running"}
 
 

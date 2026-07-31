@@ -132,8 +132,7 @@ const Footer = () => {
                             <Link to="/" className="footer-logo">
                                 <span className="logo-icon">◆</span>
                                 <span className="logo-text">
-                                    <span className="logo-primary">Precision</span>
-                                    <span className="logo-secondary">Accounting</span>
+                                    <span className="logo-primary">Wealcco</span>
                                 </span>
                             </Link>
                             <p className="footer-description">

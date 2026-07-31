@@ -75,7 +75,7 @@ const Careers = () => {
             <Hero
                 size="medium"
                 subtitle="Join Our Team"
-                title="Build Your Career at Precision Accounting"
+                title="Build Your Career at Wealcco"
                 description={`Join a team of passionate professionals committed to making a difference — growing together since ${COMPANY.foundedYear}.`}
                 primaryCTA={{ label: "View Open Positions", path: "#positions" }}
                 secondaryCTA={{ label: "Our Culture", path: "#culture" }}
@@ -86,7 +86,7 @@ const Careers = () => {
                 <div className="container">
                     <div className="why-join-content">
                         <div className="why-join-text">
-                            <span className="section-subtitle">Why Precision</span>
+                            <span className="section-subtitle">Why Wealcco</span>
                             <h2>More Than a Job — A Career You'll Love</h2>
                             <p>
                                 At {COMPANY.name}, we believe in investing in our people.
@@ -235,7 +235,7 @@ const Careers = () => {
                     <div className="stories-grid">
                         <div className="story-card">
                             <p className="story-quote">
-                                "Joining Precision was the best career decision I've made. The mentorship
+                                "Joining Wealcco was the best career decision I've made. The mentorship
                                 and growth opportunities have been incredible."
                             </p>
                             <div className="story-author">
