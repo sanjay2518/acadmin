@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Loader2, RefreshCw, AlertCircle, TrendingUp, TrendingDown,
-    Users, Receipt, BarChart2, Wallet, Target, PieChart as PieIcon
+    ArrowLeft, Loader2, RefreshCw, AlertCircle, TrendingUp, TrendingDown,
+    Users, Receipt, BarChart2, Wallet, Target
 } from 'lucide-react';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import './PortalAnalytics.css';
 
-const API = 'https://acadmin-seven.vercel.app';
+const API = 'https://acadmin-seven.vercel.app'; // --- IGNORE ---
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
 const fmt = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
@@ -114,14 +114,15 @@ export default function PortalAnalytics() {
         setUser(JSON.parse(stored));
     }, [navigate]);
 
-    const fetchAll = useCallback(async () => {
+    const fetchAll = useCallback(async (contactId) => {
+        const query = contactId ? `?contact_id=${encodeURIComponent(contactId)}` : '';
         const calls = [
-            [`${API}/api/analytics/cached/aged_receivables`, setAgedRec,  'agedRec'],
-            [`${API}/api/analytics/cached/aged_payables`,    setAgedPay,  'agedPay'],
-            [`${API}/api/analytics/cached/cashflow`,         setCashflow, 'cashflow'],
-            [`${API}/api/analytics/cached/vat`,              setVat,      'vat'],
-            [`${API}/api/analytics/cached/top`,              setTop,      'top'],
-            [`${API}/api/analytics/budget`,                  setBudget,   'budget'],
+            [`${API}/api/analytics/aged-receivables${query}`, setAgedRec,  'agedRec'],
+            [`${API}/api/analytics/aged-payables${query}`,    setAgedPay,  'agedPay'],
+            [`${API}/api/analytics/cashflow${query}`,         setCashflow, 'cashflow'],
+            [`${API}/api/analytics/vat${query}`,              setVat,      'vat'],
+            [`${API}/api/analytics/top${query}`,              setTop,      'top'],
+            [`${API}/api/analytics/budget${query}`,          setBudget,   'budget'],
         ];
         await Promise.allSettled(
             calls.map(([url, setter, key]) =>
@@ -134,13 +135,18 @@ export default function PortalAnalytics() {
         setLastSync(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
     }, []);
 
-    useEffect(() => { fetchAll(); }, [fetchAll]);
+    useEffect(() => {
+        if (user?.xero_contact_id) {
+            fetchAll(user.xero_contact_id);
+        }
+    }, [fetchAll, user]);
 
     const handleSync = async () => {
         setSyncing(true);
-        try { await fetch(`${API}/api/analytics/sync`, { method: 'POST' }); } catch {}
+        const query = user?.xero_contact_id ? `?contact_id=${encodeURIComponent(user.xero_contact_id)}` : '';
+        try { await fetch(`${API}/api/analytics/sync${query}`, { method: 'POST' }); } catch {}
         Object.keys(loading).forEach(k => setL(k, true));
-        await fetchAll();
+        await fetchAll(user?.xero_contact_id);
         setSyncing(false);
     };
 
@@ -167,6 +173,9 @@ export default function PortalAnalytics() {
             {/* Hero */}
             <div className="pa-hero">
                 <div className="pa-hero-inner">
+                    <button className="pa-back-btn" onClick={() => navigate('/portal')}>
+                        <ArrowLeft size={16} /> Back to portal
+                    </button>
                     <div className="pa-avatar">{user.name?.charAt(0).toUpperCase()}</div>
                     <div>
                         <h1 className="pa-welcome">Analytics — {user.name}</h1>
@@ -205,9 +214,9 @@ export default function PortalAnalytics() {
                                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<Tip />} />
                                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                                    <Bar dataKey="inflow"  name="Inflow"  fill="#16a34a" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="outflow" name="Outflow" fill="#dc2626" radius={[4, 4, 0, 0]} />
-                                    <Line type="monotone" dataKey="net" name="Net" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} />
+                                    <Bar dataKey="inflow"  name="Inflow"  fill="#16a34a" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
+                                    <Bar dataKey="outflow" name="Outflow" fill="#dc2626" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
+                                    <Line type="monotone" dataKey="net" name="Net" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} animationDuration={900} animationEasing="ease" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -240,9 +249,9 @@ export default function PortalAnalytics() {
                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
                                         <Tooltip content={<Tip />} />
                                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
-                                        <Bar dataKey="vat_collected" name="VAT Collected" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="vat_paid"      name="VAT Paid"      fill="#dc2626" radius={[4, 4, 0, 0]} />
-                                        <Bar dataKey="net_vat"       name="Net VAT"       fill="#2563eb" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="vat_collected" name="VAT Collected" fill="#16a34a" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
+                                        <Bar dataKey="vat_paid"      name="VAT Paid"      fill="#dc2626" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
+                                        <Bar dataKey="net_vat"       name="Net VAT"       fill="#2563eb" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -261,7 +270,7 @@ export default function PortalAnalytics() {
                                         <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
                                         <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#374151', fontSize: 11 }} width={100} />
                                         <Tooltip content={<Tip />} />
-                                        <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]}>
+                                        <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]} animationDuration={900} animationEasing="ease">
                                             {top.top_customers.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         </Bar>
                                     </BarChart>
@@ -276,9 +285,9 @@ export default function PortalAnalytics() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie data={top.top_expenses} dataKey="value" nameKey="name"
-                                            cx="50%" cy="48%" outerRadius="72%" paddingAngle={2}>
-                                            {top.top_expenses.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                                        </Pie>
+                                            cx="50%" cy="48%" outerRadius="72%" paddingAngle={2}
+                                            animationDuration={900} animationEasing="ease" />
+                                        {top.top_expenses.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         <Tooltip formatter={v => fmt(v)} />
                                         <Legend wrapperStyle={{ fontSize: '11px' }} />
                                     </PieChart>
@@ -304,7 +313,7 @@ export default function PortalAnalytics() {
                                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<Tip />} />
                                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
-                                    <Bar dataKey="actual" name="Actual" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="actual" name="Actual" fill="#2563eb" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
