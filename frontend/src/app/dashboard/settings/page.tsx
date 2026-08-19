@@ -20,9 +20,11 @@ export default function SettingsPage() {
   const [connected, setConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/auth/xero/status`)
+    const token = (() => { try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; } })();
+    if (!token) { setConnected(false); return; }
+    fetch(`${API}/api/admin/overview`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((d) => setConnected(d.connected))
+      .then((d) => setConnected(Array.isArray(d) && d.some((c: any) => c.xero_connected)))
       .catch(() => setConnected(false));
   }, []);
 
@@ -49,7 +51,7 @@ export default function SettingsPage() {
         </div>
         <div className="flex gap-3">
           <a
-            href={`${API}/api/auth/xero/login`}
+            href={`${API}/api/xero/connect`}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
           >
             {connected ? "Reconnect Xero" : "Connect Xero"}

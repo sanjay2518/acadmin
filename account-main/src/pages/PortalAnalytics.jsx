@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import './PortalAnalytics.css';
 
-const API = 'https://acadmin-seven.vercel.app'; // --- IGNORE ---
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'; // --- IGNORE ---
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
 const fmt = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
@@ -114,19 +114,19 @@ export default function PortalAnalytics() {
         setUser(JSON.parse(stored));
     }, [navigate]);
 
-    const fetchAll = useCallback(async (contactId) => {
-        const query = contactId ? `?contact_id=${encodeURIComponent(contactId)}` : '';
+    const fetchAll = useCallback(async (token) => {
+        const headers = { 'Authorization': `Bearer ${token}` };
         const calls = [
-            [`${API}/api/analytics/aged-receivables${query}`, setAgedRec,  'agedRec'],
-            [`${API}/api/analytics/aged-payables${query}`,    setAgedPay,  'agedPay'],
-            [`${API}/api/analytics/cashflow${query}`,         setCashflow, 'cashflow'],
-            [`${API}/api/analytics/vat${query}`,              setVat,      'vat'],
-            [`${API}/api/analytics/top${query}`,              setTop,      'top'],
-            [`${API}/api/analytics/budget${query}`,          setBudget,   'budget'],
+            [`${API}/api/analytics/aged-receivables`, setAgedRec,  'agedRec'],
+            [`${API}/api/analytics/aged-payables`,    setAgedPay,  'agedPay'],
+            [`${API}/api/analytics/cashflow`,         setCashflow, 'cashflow'],
+            [`${API}/api/analytics/vat`,              setVat,      'vat'],
+            [`${API}/api/analytics/top`,              setTop,      'top'],
+            [`${API}/api/analytics/budget`,           setBudget,   'budget'],
         ];
         await Promise.allSettled(
             calls.map(([url, setter, key]) =>
-                fetch(url)
+                fetch(url, { headers })
                     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
                     .then(d => { setter(key === 'top' || key === 'budget' ? d : (d.data ?? d)); setL(key, false); })
                     .catch(() => setL(key, false))
@@ -136,17 +136,14 @@ export default function PortalAnalytics() {
     }, []);
 
     useEffect(() => {
-        if (user?.xero_contact_id) {
-            fetchAll(user.xero_contact_id);
-        }
+        if (user?.token) fetchAll(user.token);
     }, [fetchAll, user]);
 
     const handleSync = async () => {
         setSyncing(true);
-        const query = user?.xero_contact_id ? `?contact_id=${encodeURIComponent(user.xero_contact_id)}` : '';
-        try { await fetch(`${API}/api/analytics/sync${query}`, { method: 'POST' }); } catch {}
+        try { await fetch(`${API}/api/analytics/sync`, { method: 'POST', headers: { 'Authorization': `Bearer ${user.token}` } }); } catch {}
         Object.keys(loading).forEach(k => setL(k, true));
-        await fetchAll(user?.xero_contact_id);
+        await fetchAll(user.token);
         setSyncing(false);
     };
 

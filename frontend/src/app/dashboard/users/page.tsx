@@ -25,7 +25,8 @@ export default function UsersPage() {
 
   const load = () => {
     setLoading(true);
-    fetch(`${API}/api/users`)
+    const token = (() => { try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; } })();
+    fetch(`${API}/api/users`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.json())
       .then(d => setUsers(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, LogIn, Eye, EyeOff, Loader2 } from 'lucide-react';
 import './LoginModal.css';
 
-const API = 'https://acadmin-seven.vercel.app';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const LoginModal = ({ isOpen, onClose }) => {
     const navigate = useNavigate();

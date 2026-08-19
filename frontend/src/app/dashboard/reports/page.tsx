@@ -18,25 +18,31 @@ export default function ReportsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we just returned from Xero OAuth
     const params = new URLSearchParams(window.location.search);
-    if (params.get("connected") === "true") {
+    if (params.get("xero") === "connected") {
       setConnected(true);
       setChecking(false);
       window.history.replaceState({}, "", "/dashboard/reports");
       return;
     }
-    fetch(`${API}/api/auth/xero/status`)
+    const token = (() => { try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; } })();
+    if (!token) { setChecking(false); return; }
+    // Admin: check if any client has Xero connected via overview
+    fetch(`${API}/api/admin/overview`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((d) => setConnected(d.connected))
+      .then((d) => setConnected(Array.isArray(d) && d.some((c: any) => c.xero_connected)))
+      .catch(() => setConnected(false))
       .finally(() => setChecking(false));
   }, []);
 
   const handleDownload = async (reportKey: string, format: "pdf" | "excel") => {
     const id = `${reportKey}-${format}`;
     setDownloading(id);
+    const token = (() => { try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; } })();
     try {
-      const resp = await fetch(`${API}/api/reports/${reportKey}/export/${format}`);
+      const resp = await fetch(`${API}/api/reports/${reportKey}/export/${format}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!resp.ok) throw new Error("Export failed");
       const blob = await resp.blob();
       const url  = URL.createObjectURL(blob);
@@ -72,17 +78,16 @@ export default function ReportsPage() {
           <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
             <Link2 className="w-10 h-10 text-blue-600" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">Connect your accounting software</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">No Xero connection yet</h3>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            Securely connect your Xero account to view and download reports. We only request read-only access.
+            Go to the Clients page, create a client, then click "Connect Xero" next to their name.
           </p>
           <a
-            href={`${API}/api/auth/xero/login`}
-            className="inline-block bg-[#13b5ea] hover:bg-[#10a1d1] text-white px-8 py-3 rounded-lg font-semibold transition shadow-sm text-lg"
+            href="/dashboard/clients"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition shadow-sm text-lg"
           >
-            Connect Xero
+            Go to Clients
           </a>
-          <p className="text-xs text-gray-400 mt-6">Secure connection via OAuth 2.0. We never store your Xero password.</p>
         </div>
       ) : (
         <div className="space-y-6">

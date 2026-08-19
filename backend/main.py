@@ -215,26 +215,24 @@ async def set_password(body: SetPasswordIn):
 # ── Admin: manage clients ─────────────────────────────────────────────────────
 
 class ClientIn(BaseModel):
-    name:  str
-    email: str
+    name:     str
+    email:    str
+    password: str
 
 @app.post("/api/admin/clients")
 async def admin_create_client(body: ClientIn, _=Depends(require_admin)):
     # 1. Create client (tenant)
     c = await supabase.table("clients").insert({"name": body.name, "email": body.email}).execute()
     client_id = c.data[0]["id"]
-    # 2. Create portal_user for this client
-    token = secrets.token_urlsafe(32)
+    # 2. Create portal_user with password set directly by admin
+    hashed = hashlib.sha256(body.password.encode()).hexdigest()
     await supabase.table("portal_users").insert({
-        "client_id":      client_id,
-        "name":           body.name,
-        "email":          body.email,
-        "role":           "client",
-        "invite_token":   token,
-        "invite_sent_at": datetime.utcnow().isoformat(),
+        "client_id":    client_id,
+        "name":         body.name,
+        "email":        body.email,
+        "role":         "client",
+        "password_hash": hashed,
     }).execute()
-    # 3. Send invite email
-    await _send_invite(body.email, body.name, token)
     return {"success": True, "client_id": client_id}
 
 
@@ -250,7 +248,13 @@ async def admin_toggle_client(client_id: str, body: dict, _=Depends(require_admi
     return {"success": True}
 
 
-@app.post("/api/admin/clients/{client_id}/resend-invite")
+@app.post("/api/admin/clients/{client_id}/reset-password")
+async def admin_reset_password(client_id: str, body: dict, _=Depends(require_admin)):
+    hashed = hashlib.sha256(body["password"].encode()).hexdigest()
+    await supabase.table("portal_users").update({"password_hash": hashed}).eq("client_id", client_id).execute()
+    return {"success": True}
+
+
 async def admin_resend_invite(client_id: str, _=Depends(require_admin)):
     row = await supabase.table("portal_users").select("*").eq("client_id", client_id).eq("role", "client").execute()
     if not row.data:

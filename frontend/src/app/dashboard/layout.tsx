@@ -1,15 +1,21 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Building2, FileText, CreditCard, Settings, Users, LogOut, Menu, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2, FileText, CreditCard, Settings, Users, LogOut, Menu, X, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 
-const API = "https://acadmin-ah6w.vercel.app";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
+
+export function getAdminToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; }
+}
 
 const NAV = [
   { href: "/dashboard",         label: "Dashboard", icon: Building2 },
-  { href: "/dashboard/users",   label: "Users",     icon: Users     },
+  { href: "/dashboard/clients", label: "Clients",   icon: UserPlus  },
+  { href: "/dashboard/users",   label: "Contacts",  icon: Users     },
   { href: "/dashboard/reports", label: "Reports",   icon: FileText  },
   { href: "/dashboard/billing", label: "Billing",   icon: CreditCard },
   { href: "/dashboard/settings",label: "Settings",  icon: Settings  },
@@ -65,8 +71,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleLogout = async () => {
-    await fetch(`${API}/api/auth/xero/logout`, { method: 'POST' }).catch(() => {});
+  useEffect(() => {
+    const stored = localStorage.getItem('admin_user');
+    if (!stored) { router.replace('/'); return; }
+    try {
+      const u = JSON.parse(stored);
+      if (u.role !== 'super_admin') { localStorage.removeItem('admin_user'); router.replace('/'); }
+    } catch { router.replace('/'); }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_user');
     router.push('/');
   };
 

@@ -1,8 +1,9 @@
 fastapi
 uvicorn[standard]
 python-dotenv
-httpx
-supabase
+httpx>=0.26
+supabase>=2.10.0
+websockets>=13.0
 reportlab
 openpyxl
 PyJWT

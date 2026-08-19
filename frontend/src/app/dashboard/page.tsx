@@ -37,16 +37,23 @@ export default function DashboardPage() {
   const [error, setError]         = useState<string | null>(null);
   const [lastSync, setLastSync]   = useState("—");
 
+  const authHeaders = () => {
+    try { return { Authorization: `Bearer ${JSON.parse(localStorage.getItem('admin_user') || '').token}` }; }
+    catch { return {}; }
+  };
+
   const load = () => {
     setLoading(true);
     setError(null);
+    const h = authHeaders();
     Promise.allSettled([
-      fetch(`${API}/api/invoices?status=AUTHORISED`).then(r => r.json()),
-      fetch(`${API}/api/dashboard/kpis`).then(r => r.json()),
-      fetch(`${API}/api/reports/monthly`).then(r => r.json()),
+      fetch(`${API}/api/portal/invoices`, { headers: h }).then(r => r.json()),
+      fetch(`${API}/api/reports/profit-and-loss?from_date=${new Date().getFullYear()}-01-01&to_date=${new Date().toISOString().slice(0,10)}`, { headers: h }).then(r => r.json()),
+      fetch(`${API}/api/reports/monthly`, { headers: h }).then(r => r.json()),
     ]).then(([inv, k, m]) => {
-      setInvoices(inv.status === "fulfilled" && Array.isArray(inv.value) ? inv.value.slice(0, 5) : []);
-      setKpis(k.status === "fulfilled" ? k.value : null);
+      setInvoices(inv.status === "fulfilled" && inv.value?.invoices ? inv.value.invoices.slice(0, 5) : []);
+      const plData = k.status === "fulfilled" ? k.value : null;
+      setKpis(plData ? { profit_and_loss: plData } : null);
       setMonthly(m.status === "fulfilled" && Array.isArray(m.value) ? m.value : []);
       if (k.status === "rejected" && inv.status === "rejected") {
         setError("Failed to load data from Xero. Please reconnect.");

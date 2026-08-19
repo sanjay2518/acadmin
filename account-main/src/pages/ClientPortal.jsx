@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
-    FileText, Loader2, CheckCircle2, Clock, AlertCircle, DollarSign, TrendingUp
+    FileText, Loader2, CheckCircle2, Clock, AlertCircle, DollarSign, TrendingUp, LogOut
 } from 'lucide-react';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import './ClientPortal.css';
 
-const API = 'https://acadmin-seven.vercel.app';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const fmt    = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 const fmtFull= (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
@@ -96,11 +96,20 @@ export default function ClientPortal() {
         if (!stored) { navigate('/'); return; }
         const u = JSON.parse(stored);
         setUser(u);
-        fetch(`${API}/api/user/portal?contact_id=${u.xero_contact_id}`)
-            .then(r => r.json())
+        fetch(`${API}/api/portal/invoices`, {
+            headers: { 'Authorization': `Bearer ${u.token}` },
+        })
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
             .then(d => setInvoices(d.invoices || []))
+            .catch(() => { localStorage.removeItem('portal_user'); navigate('/'); })
             .finally(() => setLoading(false));
     }, [navigate]);
+
+    const handleLogout = () => {
+        localStorage.removeItem('portal_user');
+        window.dispatchEvent(new Event('storage'));
+        navigate('/');
+    };
 
     if (!user) return null;
 
@@ -131,6 +140,9 @@ export default function ClientPortal() {
                         <h1 className="cp-welcome">Welcome back, {user.name}</h1>
                         <p className="cp-email">{user.email}</p>
                     </div>
+                    <button className="cp-logout-btn" onClick={handleLogout} title="Logout">
+                        <LogOut size={16} /> Logout
+                    </button>
                 </div>
             </div>
 
