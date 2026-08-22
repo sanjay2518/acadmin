@@ -15,7 +15,7 @@ const statusLabel = (inv) => {
     return                            { label: 'Pending', cls: 'badge-yellow' };
 };
 
-const fmt = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
+const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 const UserPortal = ({ user, onLogout }) => {
     const [invoices, setInvoices] = useState([]);

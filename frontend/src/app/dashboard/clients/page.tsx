@@ -114,8 +114,8 @@ export default function ClientsPage() {
 
   const connectXero = (clientId: string) => {
     const token = getToken();
-    if (!token) { setError("Session expired — please log out and log back in."); return; }
-    window.location.href = `${API}/api/xero/connect/admin/${clientId}?token=${encodeURIComponent(token)}`;
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    window.location.href = `${API}/api/xero/connect/admin/${clientId}${query}`;
   };
 
   return (
@@ -140,12 +140,12 @@ export default function ClientsPage() {
       {/* Feedback banners */}
       {success && (
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-4 py-3 mb-6 text-sm">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> {success}
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> {success}
         </div>
       )}
       {error && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm">
-          <XCircle className="w-4 h-4 flex-shrink-0" /> {error}
+          <XCircle className="w-4 h-4 shrink-0" /> {error}
         </div>
       )}
 
@@ -249,7 +249,7 @@ export default function ClientsPage() {
                 <tr key={client.id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
                         {client.name?.charAt(0).toUpperCase()}
                       </div>
                       <span className="font-medium text-gray-900">{client.name}</span>

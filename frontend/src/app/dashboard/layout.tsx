@@ -1,16 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Building2, FileText, CreditCard, Settings, Users, LogOut, Menu, X, UserPlus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Building2, FileText, CreditCard, Settings, Users, Menu, X, UserPlus } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
-
-export function getAdminToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; }
-}
+import { usePathname } from 'next/navigation';
 
 const NAV = [
   { href: "/dashboard",         label: "Dashboard", icon: Building2 },
@@ -21,7 +14,7 @@ const NAV = [
   { href: "/dashboard/settings",label: "Settings",  icon: Settings  },
 ];
 
-function SidebarContent({ pathname, onClose, handleLogout }: { pathname: string; onClose?: () => void; handleLogout: () => void }) {
+function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () => void }) {
   return (
     <>
       <div className="p-6 border-b border-gray-200 flex items-center justify-between">
@@ -53,43 +46,19 @@ function SidebarContent({ pathname, onClose, handleLogout }: { pathname: string;
           );
         })}
       </nav>
-      <div className="p-4 border-t border-gray-200">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg font-medium transition"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>Logout</span>
-        </button>
-      </div>
     </>
   );
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router   = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('admin_user');
-    if (!stored) { router.replace('/'); return; }
-    try {
-      const u = JSON.parse(stored);
-      if (u.role !== 'super_admin') { localStorage.removeItem('admin_user'); router.replace('/'); }
-    } catch { router.replace('/'); }
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('admin_user');
-    router.push('/');
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col flex-shrink-0">
-        <SidebarContent pathname={pathname} handleLogout={handleLogout} />
+      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col shrink-0">
+        <SidebarContent pathname={pathname} />
       </aside>
 
       {/* Mobile overlay */}
@@ -104,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-50 md:hidden transition-transform duration-300 ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <SidebarContent pathname={pathname} onClose={() => setMobileOpen(false)} handleLogout={handleLogout} />
+        <SidebarContent pathname={pathname} onClose={() => setMobileOpen(false)} />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">

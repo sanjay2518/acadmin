@@ -10,9 +10,9 @@ import {
 } from 'recharts';
 import './PortalAnalytics.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'; // --- IGNORE ---
+const API = import.meta.env.VITE_API_URL || 'https://acadmin-seven.vercel.app'; // --- IGNORE ---
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
-const fmt = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 // ── Shared components ─────────────────────────────────────────────────────────
 
@@ -208,7 +208,7 @@ export default function PortalAnalytics() {
                                 <BarChart data={cashflow} barGap={3}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<Tip />} />
                                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                                     <Bar dataKey="inflow"  name="Inflow"  fill="#16a34a" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
@@ -243,7 +243,7 @@ export default function PortalAnalytics() {
                                     <BarChart data={vat} barGap={4}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                         <Tooltip content={<Tip />} />
                                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                                         <Bar dataKey="vat_collected" name="VAT Collected" fill="#16a34a" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
@@ -264,7 +264,7 @@ export default function PortalAnalytics() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={top.top_customers} layout="vertical" margin={{ left: 4 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                         <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#374151', fontSize: 11 }} width={100} />
                                         <Tooltip content={<Tip />} />
                                         <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]} animationDuration={900} animationEasing="ease">
@@ -307,7 +307,7 @@ export default function PortalAnalytics() {
                                 <BarChart data={budgetRows.slice(0, 12)} barGap={4}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<Tip />} />
                                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                                     <Bar dataKey="actual" name="Actual" fill="#2563eb" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />

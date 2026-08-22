@@ -5,7 +5,7 @@ const Pricing = () => {
   const plans = [
     {
       name: 'Starter',
-      price: '£199',
+      price: '₹199',
       duration: '/month',
       description: 'Perfect for small firms looking to get started with basic dashboard visibility.',
       features: [
@@ -19,7 +19,7 @@ const Pricing = () => {
     },
     {
       name: 'Professional',
-      price: '£499',
+      price: '₹499',
       duration: '/month',
       description: 'Ideal for growing firms needing deeper insights and more client capacity.',
       features: [
@@ -93,7 +93,7 @@ const Pricing = () => {
               <ul className="space-y-4 mb-8">
                 {plan.features.map((feature, fIndex) => (
                   <li key={fIndex} className="flex items-start">
-                    <Check className={`w-5 h-5 mr-3 flex-shrink-0 ${plan.popular ? 'text-blue-200' : 'text-blue-500'}`} />
+                    <Check className={`w-5 h-5 mr-3 shrink-0 ${plan.popular ? 'text-blue-200' : 'text-blue-500'}`} />
                     <span className={plan.popular ? 'text-white' : 'text-gray-600'}>
                       {feature}
                     </span>

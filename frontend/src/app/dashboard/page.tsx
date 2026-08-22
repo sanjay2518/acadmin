@@ -12,8 +12,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app
 function extractKpiValue(report: any, label: string): number {
   try {
     for (const section of report?.Reports?.[0]?.Rows ?? []) {
-      // check SummaryRows and Rows inside sections
-      const rows = section?.Rows ?? [];
+      const rows = section?.Rows ?? [section];
       for (const row of rows) {
         const cells = row?.Cells ?? [];
         if (cells[0]?.Value?.toLowerCase() === label.toLowerCase()) {
@@ -26,7 +25,7 @@ function extractKpiValue(report: any, label: string): number {
 }
 
 function fmt(n: number) {
-  return `£${n.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export default function DashboardPage() {
@@ -37,7 +36,7 @@ export default function DashboardPage() {
   const [error, setError]         = useState<string | null>(null);
   const [lastSync, setLastSync]   = useState("—");
 
-  const authHeaders = () => {
+  const authHeaders = (): Record<string, string> => {
     try { return { Authorization: `Bearer ${JSON.parse(localStorage.getItem('admin_user') || '').token}` }; }
     catch { return {}; }
   };
@@ -46,6 +45,18 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
     const h = authHeaders();
+    if (!("Authorization" in h)) {
+      fetch(`${API}/api/admin/financial-overview`)
+        .then(r => r.json())
+        .then(d => {
+          setInvoices(Array.isArray(d?.invoices) ? d.invoices : []);
+          setKpis(d?.profit_and_loss ? { profit_and_loss: d.profit_and_loss, balance_sheet: d.balance_sheet } : null);
+          setMonthly(Array.isArray(d?.monthly) ? d.monthly : []);
+          setLastSync(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
     Promise.allSettled([
       fetch(`${API}/api/portal/invoices`, { headers: h }).then(r => r.json()),
       fetch(`${API}/api/reports/profit-and-loss?from_date=${new Date().getFullYear()}-01-01&to_date=${new Date().toISOString().slice(0,10)}`, { headers: h }).then(r => r.json()),
@@ -128,7 +139,7 @@ export default function DashboardPage() {
                 <LineChart data={monthly}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#6B7280" }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#6B7280" }} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#6B7280" }} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v: any) => fmt(v)} contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
                   <Line type="monotone" dataKey="revenue"  name="Revenue"  stroke="#2563EB" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#EF4444" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />

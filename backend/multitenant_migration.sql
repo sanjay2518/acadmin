@@ -52,8 +52,12 @@ create table if not exists analytics_cache (
 create table if not exists oauth_states (
   state      text primary key,
   client_id  uuid references clients(id) on delete cascade,
+  origin     text not null default 'client',
   created_at timestamptz not null default now()
 );
+
+alter table oauth_states
+  add column if not exists origin text not null default 'client';
 
 -- 6. Seed the super_admin (Nikhil)
 --    Password hash below = SHA-256 of "changeme" — update immediately after first login

@@ -9,10 +9,10 @@ import {
 } from 'recharts';
 import './ClientPortal.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API = import.meta.env.VITE_API_URL || 'https://acadmin-seven.vercel.app';
 
-const fmt    = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-const fmtFull= (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
+const fmt    = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const fmtFull= (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 const fmtDate = (val) => {
     if (!val) return '—';
@@ -192,7 +192,7 @@ export default function ClientPortal() {
                                             <BarChart data={monthlyData} barGap={4}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
                                                 <Tooltip content={<CustomTooltip />} />
                                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }} />
                                                 <Bar dataKey="billed"  name="Billed"  fill="#3b82f6" radius={[4,4,0,0]} />
@@ -255,7 +255,7 @@ export default function ClientPortal() {
                                     <LineChart data={trendData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                                         <Line type="monotone" dataKey="cumulative" name="Cumulative Total" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4, fill: '#2563eb' }} activeDot={{ r: 6 }} />
