@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   UserPlus, Loader2, RefreshCw, CheckCircle2, XCircle,
@@ -23,7 +23,7 @@ interface Client {
   xero_connected?: boolean;
 }
 
-export default function ClientsPage() {
+function ClientsContent() {
   const searchParams = useSearchParams();
   const [clients, setClients]         = useState<Client[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -303,5 +303,13 @@ export default function ClientsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ClientsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ClientsContent />
+    </Suspense>
   );
 }
