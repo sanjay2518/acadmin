@@ -15,23 +15,39 @@ interface User {
   is_supplier: boolean;
   balance: number;
   city: string;
+  client_name?: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
 }
 
 export default function UsersPage() {
   const [users, setUsers]       = useState<User[]>([]);
+  const [clients, setClients]   = useState<Client[]>([]);
+  const [clientId, setClientId] = useState("");
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
   const [selected, setSelected] = useState<User | null>(null);
 
-  const load = () => {
+  const load = (selectedClientId = clientId) => {
     setLoading(true);
-    fetch(`${API}/api/users`)
+    const token = (() => { try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; } })();
+    const query = selectedClientId ? `?client_id=${encodeURIComponent(selectedClientId)}` : "";
+    fetch(`${API}/api/users${query}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.json())
       .then(d => setUsers(Array.isArray(d) ? d : []))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const token = (() => { try { return JSON.parse(localStorage.getItem('admin_user') || '').token; } catch { return null; } })();
+    fetch(`${API}/api/admin/clients`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(d => setClients(Array.isArray(d) ? d : []));
+    load("");
+  }, []);
 
   const filtered = users.filter(u =>
     u.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -45,12 +61,23 @@ export default function UsersPage() {
           <h2 className="text-3xl font-bold text-gray-900">Users</h2>
           <p className="text-gray-500 mt-1">Contacts synced from your Xero account</p>
         </div>
-        <button
-          onClick={load}
-          className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
-        >
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <select
+            value={clientId}
+            onChange={e => { setClientId(e.target.value); load(e.target.value); }}
+            className="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Filter contacts by client"
+          >
+            <option value="">All clients</option>
+            {clients.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}
+          </select>
+          <button
+            onClick={() => load()}
+            className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4" /> Refresh
+          </button>
+        </div>
       </header>
 
       {/* Stats */}
@@ -96,6 +123,7 @@ export default function UsersPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Name</th>
+                <th className="text-left px-6 py-3 text-gray-500 font-medium">Client</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Email</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">Phone</th>
                 <th className="text-left px-6 py-3 text-gray-500 font-medium">City</th>
@@ -106,18 +134,19 @@ export default function UsersPage() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map(user => (
                 <tr
-                  key={user.id}
+                  key={`${user.client_name}-${user.id}`}
                   onClick={() => setSelected(user)}
                   className="hover:bg-blue-50 cursor-pointer transition"
                 >
                   <td className="px-6 py-4 font-medium text-gray-900">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
                         {user.name?.charAt(0).toUpperCase()}
                       </div>
                       {user.name}
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-gray-500">{user.client_name || "—"}</td>
                   <td className="px-6 py-4 text-gray-500">{user.email || "—"}</td>
                   <td className="px-6 py-4 text-gray-500">{user.phone || "—"}</td>
                   <td className="px-6 py-4 text-gray-500">{user.city || "—"}</td>
@@ -133,7 +162,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 text-right font-medium">
                     <span className={user.balance > 0 ? "text-green-600" : user.balance < 0 ? "text-red-600" : "text-gray-400"}>
-                      £{Number(user.balance).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                      ₹{Number(user.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
                   </td>
                 </tr>
@@ -189,7 +218,7 @@ export default function UsersPage() {
                   : <TrendingDown className="w-5 h-5 text-red-600" />
                 }
                 <span className={`text-2xl font-bold ${selected.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  £{Number(selected.balance).toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                  ₹{Number(selected.balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

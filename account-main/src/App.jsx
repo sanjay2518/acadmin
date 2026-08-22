@@ -20,6 +20,7 @@ import Accessibility from './pages/Accessibility';
 import Chatbot from './components/Chatbot';
 import ClientPortal from './pages/ClientPortal';
 import PortalAnalytics from './pages/PortalAnalytics';
+import SetPassword from './pages/SetPassword';
 import './index.css';
 
 const ScrollToTop = () => {
@@ -57,6 +58,7 @@ function App() {
           <Route path="/accessibility" element={<Accessibility />} />
           <Route path="/portal" element={<ClientPortal />} />
           <Route path="/portal/analytics" element={<PortalAnalytics />} />
+          <Route path="/portal/set-password" element={<SetPassword />} />
           {/* Fallback route */}
           <Route path="*" element={<Home />} />
         </Routes>

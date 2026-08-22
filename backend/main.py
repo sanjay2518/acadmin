@@ -1,137 +1,296 @@
 import os
 import base64
 import secrets
+import hashlib
 import io
-from datetime import datetime
+import re
+from datetime import datetime, date, timedelta
+from typing import Optional
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from typing import Optional
-from supabase import create_client, Client
+from supabase import acreate_client, AsyncClient
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 import openpyxl
+import jwt
 
 load_dotenv()
 
 # ── Config ────────────────────────────────────────────────────────────────────
-CLIENT_ID     = os.environ["XERO_CLIENT_ID"]
-CLIENT_SECRET = os.environ["XERO_CLIENT_SECRET"]
-REDIRECT_URI  = os.environ["XERO_REDIRECT_URI"]
-SECRET_KEY    = os.environ["SECRET_KEY"]
+XERO_CLIENT_ID     = os.environ["XERO_CLIENT_ID"]
+XERO_CLIENT_SECRET = os.environ["XERO_CLIENT_SECRET"]
+XERO_REDIRECT_URI  = os.environ.get("XERO_REDIRECT_URI", "")
+SECRET_KEY         = os.environ["SECRET_KEY"]
+SUPABASE_URL       = os.environ["SUPABASE_URL"]
+SUPABASE_KEY       = os.environ["SUPABASE_KEY"]
+SMTP_HOST          = os.environ.get("SMTP_HOST", "")
+SMTP_PORT          = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER          = os.environ.get("SMTP_USER", "")
+SMTP_PASS          = os.environ.get("SMTP_PASS", "")
+FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+ADMIN_URL          = os.environ.get("ADMIN_URL", "http://localhost:3000")
+ADMIN_AUTH_DISABLED = os.environ.get("ADMIN_AUTH_DISABLED", "false").lower() == "true"
 
-SUPABASE_URL  = os.environ["SUPABASE_URL"]
-SUPABASE_KEY  = os.environ["SUPABASE_KEY"]
+
+def _resolve_redirect_uri(request: Optional[Request] = None) -> str:
+    if request is not None:
+        forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+        return f"{forwarded_proto}://{host}/api/xero/callback"
+
+    env_value = (XERO_REDIRECT_URI or "").strip()
+    if env_value:
+        return env_value.rstrip("/") if env_value.endswith("/api/xero/callback") else env_value.rstrip("/") + "/api/xero/callback"
+    raise RuntimeError("XERO_REDIRECT_URI is not configured")
 
 XERO_TOKEN_URL   = "https://identity.xero.com/connect/token"
 XERO_CONNECT_URL = "https://api.xero.com/connections"
 XERO_API_BASE    = "https://api.xero.com/api.xro/2.0"
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+XERO_SCOPES      = (
+    "offline_access openid profile email "
+    "accounting.settings.read accounting.contacts.read "
+    "accounting.invoices.read "
+    "accounting.reports.aged.read accounting.reports.balancesheet.read "
+    "accounting.reports.budgetsummary.read accounting.reports.profitandloss.read"
+)
 
 # ── App ───────────────────────────────────────────────────────────────────────
+supabase: AsyncClient = None
 app = FastAPI(title="Wealcco API")
+
+@app.on_event("startup")
+async def startup():
+    global supabase
+    supabase = await acreate_client(SUPABASE_URL, SUPABASE_KEY)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
+        "http://localhost:3000", "http://localhost:5173",
+        "http://localhost:5174", "http://localhost:5175",
         "https://acadmin-ifi1.vercel.app",
         "https://acadmin-seven.vercel.app",
         "https://acadmin-ah6w.vercel.app",
-        "http://localhost:5174",
-        "http://localhost:5175",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── JWT helpers ───────────────────────────────────────────────────────────────
 
-def _basic_auth_header() -> str:
-    creds = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
-    return f"Basic {creds}"
+def _make_token(user: dict) -> str:
+    payload = {
+        "sub":       str(user["id"]),
+        "role":      user["role"],
+        "client_id": str(user["client_id"]) if user.get("client_id") else None,
+        "name":      user["name"],
+        "email":     user["email"],
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 
-def _get_tokens() -> dict:
-    """Fetch the latest Xero tokens from Supabase."""
-    row = supabase.table("xero_tokens").select("*").order("id", desc=True).limit(1).execute()
+def _decode_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+bearer = HTTPBearer(auto_error=False)
+
+async def get_current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> dict:
+    if ADMIN_AUTH_DISABLED and creds is None:
+        return {"role": "super_admin", "name": "Local admin"}
+    if creds is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return _decode_token(creds.credentials)
+
+async def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    if ADMIN_AUTH_DISABLED:
+        return {"role": "super_admin", "name": "Local admin"}
+    if user["role"] != "super_admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+async def require_client(user: dict = Depends(get_current_user)) -> dict:
+    if user["role"] not in ("super_admin", "client"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    return user
+
+# ── Xero helpers (per-client token) ──────────────────────────────────────────
+
+def _xero_basic() -> str:
+    return "Basic " + base64.b64encode(f"{XERO_CLIENT_ID}:{XERO_CLIENT_SECRET}".encode()).decode()
+
+
+async def _get_xero_conn(client_id: str) -> dict:
+    row = await supabase.table("xero_connections").select("*").eq("client_id", client_id).execute()
     if not row.data:
-        raise HTTPException(status_code=401, detail="Xero not connected. Please authenticate first.")
+        raise HTTPException(status_code=404, detail="Xero not connected for this client")
     return row.data[0]
 
 
-def _contact_query(contact_id: Optional[str]) -> str:
-    return f"ContactIDs={contact_id}&" if contact_id else ""
-
-
-async def _refresh_if_needed(tokens: dict) -> dict:
-    """Refresh access token if expired (Xero tokens last 30 min)."""
-    expires_at = tokens.get("expires_at", 0)
-    if datetime.utcnow().timestamp() < expires_at - 60:
-        return tokens  # still valid
-
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
+async def _refresh_xero(conn: dict) -> dict:
+    if datetime.utcnow().timestamp() < conn["expires_at"] - 60:
+        return conn
+    async with httpx.AsyncClient() as c:
+        r = await c.post(
             XERO_TOKEN_URL,
-            headers={"Authorization": _basic_auth_header(), "Content-Type": "application/x-www-form-urlencoded"},
-            data={"grant_type": "refresh_token", "refresh_token": tokens["refresh_token"]},
+            headers={"Authorization": _xero_basic(), "Content-Type": "application/x-www-form-urlencoded"},
+            data={"grant_type": "refresh_token", "refresh_token": conn["refresh_token"]},
         )
-    resp.raise_for_status()
-    new_tokens = resp.json()
+    r.raise_for_status()
+    t = r.json()
     updated = {
-        "access_token":  new_tokens["access_token"],
-        "refresh_token": new_tokens.get("refresh_token", tokens["refresh_token"]),
-        "expires_at":    datetime.utcnow().timestamp() + new_tokens["expires_in"],
-        "tenant_id":     tokens["tenant_id"],
+        "access_token":  t["access_token"],
+        "refresh_token": t.get("refresh_token", conn["refresh_token"]),
+        "expires_at":    datetime.utcnow().timestamp() + t["expires_in"],
     }
-    supabase.table("xero_tokens").update(updated).eq("id", tokens["id"]).execute()
-    return updated
+    await supabase.table("xero_connections").update(updated).eq("id", conn["id"]).execute()
+    return {**conn, **updated}
 
 
-async def _xero_get(path: str) -> dict:
-    tokens = _get_tokens()
-    tokens = await _refresh_if_needed(tokens)
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
+async def _xero_get(client_id: str, path: str) -> dict:
+    conn = await _get_xero_conn(client_id)
+    conn = await _refresh_xero(conn)
+    async with httpx.AsyncClient() as c:
+        r = await c.get(
             f"{XERO_API_BASE}/{path}",
             headers={
-                "Authorization": f"Bearer {tokens['access_token']}",
-                "Xero-tenant-id": tokens["tenant_id"],
+                "Authorization": f"Bearer {conn['access_token']}",
+                "Xero-tenant-id": conn["xero_tenant_id"],
                 "Accept": "application/json",
             },
         )
-    resp.raise_for_status()
-    return resp.json()
+    r.raise_for_status()
+    return r.json()
 
 
-async def _xero_post(path: str, payload: dict) -> dict:
-    tokens = _get_tokens()
-    tokens = await _refresh_if_needed(tokens)
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"{XERO_API_BASE}/{path}",
-            headers={
-                "Authorization": f"Bearer {tokens['access_token']}",
-                "Xero-tenant-id": tokens["tenant_id"],
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            json=payload,
-        )
-    resp.raise_for_status()
-    return resp.json()
+# ── Email invite helper ───────────────────────────────────────────────────────
 
-# ── Contact Submissions ───────────────────────────────────────────────────────
+async def _send_invite(email: str, name: str, token: str):
+    import smtplib
+    from email.mime.text import MIMEText
+    link = f"{FRONTEND_URL}/portal/set-password?token={token}"
+    body = f"Hi {name},\n\nYour Wealcco client portal has been created.\nSet your password here:\n{link}\n\nThis link expires in 72 hours."
+    msg = MIMEText(body)
+    msg["Subject"] = "Your Wealcco Portal Invitation"
+    msg["From"]    = SMTP_USER
+    msg["To"]      = email
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as s:
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.send_message(msg)
+    except Exception as e:
+        print(f"Email send failed: {e}")
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+class LoginIn(BaseModel):
+    email:    str
+    password: str
+
+@app.post("/api/auth/login")
+async def login(body: LoginIn):
+    row = await supabase.table("portal_users").select("*").eq("email", body.email).execute()
+    if not row.data:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    user = row.data[0]
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Password not set — check your invite email")
+    if user["password_hash"] != hashlib.sha256(body.password.encode()).hexdigest():
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user["role"] == "client":
+        client = await supabase.table("clients").select("is_active").eq("id", user["client_id"]).execute()
+        if not client.data or not client.data[0]["is_active"]:
+            raise HTTPException(status_code=403, detail="Account deactivated")
+    return {"token": _make_token(user), "role": user["role"], "name": user["name"]}
+
+
+class SetPasswordIn(BaseModel):
+    token:    str
+    password: str
+
+@app.post("/api/auth/set-password")
+async def set_password(body: SetPasswordIn):
+    row = await supabase.table("portal_users").select("*").eq("invite_token", body.token).execute()
+    if not row.data:
+        raise HTTPException(status_code=400, detail="Invalid or expired invite token")
+    hashed = hashlib.sha256(body.password.encode()).hexdigest()
+    await supabase.table("portal_users").update({
+        "password_hash": hashed,
+        "invite_token":  None,
+    }).eq("id", row.data[0]["id"]).execute()
+    return {"success": True}
+
+# ── Admin: manage clients ─────────────────────────────────────────────────────
+
+class ClientIn(BaseModel):
+    name:     str
+    email:    str
+    password: str
+
+@app.post("/api/admin/clients")
+async def admin_create_client(body: ClientIn, _=Depends(require_admin)):
+    # 1. Create client (tenant)
+    c = await supabase.table("clients").insert({"name": body.name, "email": body.email}).execute()
+    client_id = c.data[0]["id"]
+    # 2. Create portal_user with password set directly by admin
+    hashed = hashlib.sha256(body.password.encode()).hexdigest()
+    await supabase.table("portal_users").insert({
+        "client_id":    client_id,
+        "name":         body.name,
+        "email":        body.email,
+        "role":         "client",
+        "password_hash": hashed,
+    }).execute()
+    return {"success": True, "client_id": client_id}
+
+
+@app.get("/api/admin/clients")
+async def admin_list_clients(_=Depends(require_admin)):
+    rows = await supabase.table("clients").select("*, xero_connections(xero_tenant_id), portal_users(email,role)").execute()
+    return [{**client, "xero_connected": bool(client.get("xero_connections"))} for client in rows.data]
+
+
+@app.patch("/api/admin/clients/{client_id}")
+async def admin_toggle_client(client_id: str, body: dict, _=Depends(require_admin)):
+    await supabase.table("clients").update({"is_active": body["is_active"]}).eq("id", client_id).execute()
+    return {"success": True}
+
+
+@app.post("/api/admin/clients/{client_id}/reset-password")
+async def admin_reset_password(client_id: str, body: dict, _=Depends(require_admin)):
+    hashed = hashlib.sha256(body["password"].encode()).hexdigest()
+    await supabase.table("portal_users").update({"password_hash": hashed}).eq("client_id", client_id).execute()
+    return {"success": True}
+
+
+async def admin_resend_invite(client_id: str, _=Depends(require_admin)):
+    row = await supabase.table("portal_users").select("*").eq("client_id", client_id).eq("role", "client").execute()
+    if not row.data:
+        raise HTTPException(status_code=404, detail="Client user not found")
+    user = row.data[0]
+    token = secrets.token_urlsafe(32)
+    await supabase.table("portal_users").update({
+        "invite_token":   token,
+        "invite_sent_at": datetime.utcnow().isoformat(),
+        "password_hash":  None,
+    }).eq("id", user["id"]).execute()
+    await _send_invite(user["email"], user["name"], token)
+    return {"success": True}
+
+# ── Contact form (public) ─────────────────────────────────────────────────────
 
 class ContactIn(BaseModel):
     name:    str
@@ -143,240 +302,195 @@ class ContactIn(BaseModel):
 
 @app.post("/api/contacts")
 async def create_contact(body: ContactIn):
-    result = supabase.table("contact_submissions").insert({
-        "name":    body.name,
-        "email":   body.email,
-        "phone":   body.phone,
-        "company": body.company,
-        "service": body.service,
-        "message": body.message,
-        "status":  "new",
+    r = await supabase.table("contact_submissions").insert({
+        "name": body.name, "email": body.email, "phone": body.phone,
+        "company": body.company, "service": body.service,
+        "message": body.message, "status": "new",
     }).execute()
-    return {"success": True, "id": result.data[0]["id"] if result.data else None}
-
+    return {"success": True, "id": r.data[0]["id"] if r.data else None}
 
 @app.get("/api/contacts")
-async def get_contacts():
-    result = supabase.table("contact_submissions").select("*").order("created_at", desc=True).execute()
-    return result.data
+async def get_contacts(_=Depends(require_admin)):
+    r = await supabase.table("contact_submissions").select("*").order("created_at", desc=True).execute()
+    return r.data
 
 
-# ── User Auth ─────────────────────────────────────────────────────────────────
+@app.get("/api/users")
+async def get_users(client_id: Optional[str] = None, user=Depends(require_client)):
+    if user["role"] == "client":
+        client_ids = [user["client_id"]]
+    elif client_id:
+        client_ids = [client_id]
+    else:
+        clients = await supabase.table("clients").select("id,name").execute()
+        client_ids = [client["id"] for client in clients.data]
 
-class LoginIn(BaseModel):
-    email:    str
-    password: str
+    client_names = {}
+    if client_ids:
+        clients = await supabase.table("clients").select("id,name").in_("id", client_ids).execute()
+        client_names = {client["id"]: client["name"] for client in clients.data}
 
-@app.post("/api/auth/login")
-async def user_login(body: LoginIn):
-    import hashlib
-    row = supabase.table("xero_users").select("*").eq("email", body.email).execute()
-    if not row.data:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    user = row.data[0]
-    # Compare SHA-256 hashed password
-    hashed = hashlib.sha256(body.password.encode()).hexdigest()
-    if user["password_hash"] != hashed:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    return {
-        "success":          True,
-        "xero_contact_id":  user["xero_contact_id"],
-        "name":             user["name"],
-        "email":            user["email"],
-    }
+    async def load_contacts(cid: str) -> list[dict]:
+        try:
+            data = await _xero_get(cid, "Contacts")
+        except Exception:
+            return []
+        result = []
+        for contact in data.get("Contacts", []):
+            phones = contact.get("Phones") or []
+            addresses = contact.get("Addresses") or []
+            city = next((address.get("City") for address in addresses if address.get("AddressType") == "STREET"), "")
+            receivable = contact.get("Balances", {}).get("AccountsReceivable", {})
+            payable = contact.get("Balances", {}).get("AccountsPayable", {})
+            result.append({
+                "id": contact.get("ContactID"),
+                "name": contact.get("Name", ""),
+                "email": contact.get("EmailAddress", ""),
+                "phone": next((phone.get("PhoneNumber") for phone in phones if phone.get("PhoneType") == "DEFAULT"), ""),
+                "city": city,
+                "status": contact.get("ContactStatus", ""),
+                "is_customer": bool(contact.get("IsCustomer")),
+                "is_supplier": bool(contact.get("IsSupplier")),
+                "balance": float(receivable.get("Outstanding", 0) or 0) - float(payable.get("Outstanding", 0) or 0),
+                "client_id": cid,
+                "client_name": client_names.get(cid, ""),
+            })
+        return result
 
-
-@app.get("/api/user/portal")
-async def user_portal(contact_id: str):
-    """Fetch invoices for a specific Xero contact."""
-    try:
-        invoices = await _xero_get(f"Invoices?ContactIDs={contact_id}&Statuses=AUTHORISED,PAID,VOIDED&order=DueDate DESC")
-        invoice_list = invoices.get("Invoices", [])
-    except Exception:
-        invoice_list = []
-
-    total = len(invoice_list)
-    paid = sum(1 for inv in invoice_list if inv.get("Status") == "PAID")
-    outstanding = sum(
-        float(inv.get("AmountDue", 0))
-        for inv in invoice_list
-        if inv.get("Status") == "AUTHORISED"
-    )
-    return {
-        "invoices": invoice_list,
-        "stats": {
-            "total": total,
-            "paid": paid,
-            "outstanding": round(outstanding, 2),
-        },
-    }
+    import asyncio
+    contacts = await asyncio.gather(*(load_contacts(cid) for cid in client_ids))
+    return [contact for client_contacts in contacts for contact in client_contacts]
 
 
-# ── OAuth ─────────────────────────────────────────────────────────────────────
-XERO_SCOPES = (
-    "offline_access openid profile email "
-    "accounting.settings.read "
-    "accounting.contacts.read "
-    "accounting.transactions.read "
-    "accounting.reports.read "
-    "accounting.budgets.read"
-)
+# ── Xero OAuth (per-client) ───────────────────────────────────────────────────
 
-@app.get("/api/auth/xero/login")
-def xero_login():
+@app.get("/api/xero/connect")
+async def xero_connect(request: Request, user: dict = Depends(require_client)):
+    client_id = user["client_id"] if user["role"] == "client" else None
+    if not client_id:
+        raise HTTPException(status_code=400, detail="Provide client_id as admin")
     state = secrets.token_urlsafe(32)
-    supabase.table("oauth_states").insert({"state": state}).execute()
-    from urllib.parse import quote
-    url = (
-        f"https://login.xero.com/identity/connect/authorize"
-        f"?response_type=code&client_id={CLIENT_ID}"
-        f"&redirect_uri={quote(REDIRECT_URI)}&scope={quote(XERO_SCOPES)}&state={state}"
-    )
+    await supabase.table("oauth_states").insert({"state": state, "client_id": client_id}).execute()
+    from urllib.parse import urlencode
+    redirect_uri = _resolve_redirect_uri(request)
+    url = "https://login.xero.com/identity/connect/authorize?" + urlencode({
+        "response_type": "code",
+        "client_id": XERO_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": XERO_SCOPES,
+        "state": state,
+    })
     return RedirectResponse(url)
 
 
-@app.get("/api/auth/xero/debug")
-def xero_debug():
-    """Temporary: shows the exact OAuth URL being built."""
-    from urllib.parse import quote
-    scopes = "offline_access openid profile email accounting.transactions.read accounting.reports.read accounting.contacts.read accounting.settings.read"
-    url = (
-        f"https://login.xero.com/identity/connect/authorize"
-        f"?response_type=code&client_id={CLIENT_ID}"
-        f"&redirect_uri={quote(REDIRECT_URI)}&scope={quote(scopes)}&state=debugtest"
-    )
-    return {"client_id": CLIENT_ID, "redirect_uri": REDIRECT_URI, "full_url": url}
+@app.get("/api/xero/connect/admin/{client_id}")
+async def xero_connect_for_client(request: Request, client_id: str, token: Optional[str] = Query(None)):
+    # Token passed as query param because this is a browser redirect (can't set headers)
+    if not ADMIN_AUTH_DISABLED:
+        if not token:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        try:
+            user = _decode_token(token)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        if user["role"] != "super_admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+    state = secrets.token_urlsafe(32)
+    await supabase.table("oauth_states").insert({"state": state, "client_id": client_id, "origin": "admin"}).execute()
+    from urllib.parse import urlencode
+    redirect_uri = _resolve_redirect_uri(request)
+    url = "https://login.xero.com/identity/connect/authorize?" + urlencode({
+        "response_type": "code",
+        "client_id": XERO_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": XERO_SCOPES,
+        "state": state,
+    })
+    return RedirectResponse(url)
 
 
-@app.get("/api/auth/xero/callback")
+@app.get("/api/xero/callback")
 async def xero_callback(
+    request: Request,
     state: str = Query(...),
-    code: str = Query(None),
+    code:  str = Query(None),
     error: str = Query(None),
     error_description: str = Query(None),
 ):
+    print(f"DEBUG XERO_CALLBACK state_present={bool(state)} code_present={bool(code)} error={error or 'none'}")
     if error:
         raise HTTPException(status_code=400, detail=error_description or error)
-    # Validate state
-    row = supabase.table("oauth_states").select("state").eq("state", state).execute()
-    if not row.data:
-        raise HTTPException(status_code=400, detail=f"Invalid OAuth state: {state[:8]}… not found in DB")
-    supabase.table("oauth_states").delete().eq("state", state).execute()
+    if not code:
+        raise HTTPException(status_code=400, detail="Xero did not return an authorization code")
+    state_row = await supabase.table("oauth_states").select("*").eq("state", state).execute()
+    if not state_row.data:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    client_id = state_row.data[0]["client_id"]
+    await supabase.table("oauth_states").delete().eq("state", state).execute()
 
-    # Exchange code for tokens
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
+    redirect_uri = _resolve_redirect_uri(request)
+    async with httpx.AsyncClient() as c:
+        r = await c.post(
             XERO_TOKEN_URL,
-            headers={"Authorization": _basic_auth_header(), "Content-Type": "application/x-www-form-urlencoded"},
-            data={"grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT_URI},
+            headers={"Authorization": _xero_basic(), "Content-Type": "application/x-www-form-urlencoded"},
+            data={"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri},
         )
-    resp.raise_for_status()
-    token_data = resp.json()
+    if r.is_error:
+        print(f"ERROR XERO_TOKEN status={r.status_code} response={r.text[:500]}")
+        raise HTTPException(status_code=502, detail="Xero token exchange failed")
+    t = r.json()
 
-    # Get tenant ID
-    async with httpx.AsyncClient() as client:
-        conn_resp = await client.get(
-            XERO_CONNECT_URL,
-            headers={"Authorization": f"Bearer {token_data['access_token']}", "Accept": "application/json"},
-        )
-    conn_resp.raise_for_status()
-    tenant_id = conn_resp.json()[0]["tenantId"]
+    async with httpx.AsyncClient() as c:
+        cr = await c.get(XERO_CONNECT_URL, headers={"Authorization": f"Bearer {t['access_token']}", "Accept": "application/json"})
+    cr.raise_for_status()
+    connections = cr.json()
+    if not connections:
+        raise HTTPException(status_code=400, detail="No Xero organisation was authorised for this account")
+    tenant_id = connections[0]["tenantId"]
 
-    # Persist tokens in Supabase
-    supabase.table("xero_tokens").upsert({
-        "access_token":  token_data["access_token"],
-        "refresh_token": token_data["refresh_token"],
-        "expires_at":    datetime.utcnow().timestamp() + token_data["expires_in"],
-        "tenant_id":     tenant_id,
-    }).execute()
+    await supabase.table("xero_connections").upsert({
+        "client_id":      client_id,
+        "xero_tenant_id": tenant_id,
+        "access_token":   t["access_token"],
+        "refresh_token":  t["refresh_token"],
+        "expires_at":     datetime.utcnow().timestamp() + t["expires_in"],
+        "updated_at":     datetime.utcnow().isoformat(),
+    }, on_conflict="client_id").execute()
 
-    # Redirect back to the admin frontend reports page
-    return RedirectResponse("https://acadmin-ifi1.vercel.app/dashboard/reports?connected=true")
+    # If connected via admin flow, redirect back to admin dashboard; else to client portal
+    origin = state_row.data[0].get("origin", "client")
+    if origin == "admin":
+        return RedirectResponse(f"{ADMIN_URL}/dashboard/clients?xero=connected")
+    return RedirectResponse(f"{FRONTEND_URL}/portal?xero=connected")
 
 
-@app.post("/api/auth/xero/logout")
-async def xero_logout():
-    """Revoke Xero tokens and clear them from Supabase."""
+@app.delete("/api/xero/disconnect")
+async def xero_disconnect(user: dict = Depends(require_client)):
+    client_id = user["client_id"]
     try:
-        tokens = _get_tokens()
-        # Revoke the token with Xero
-        async with httpx.AsyncClient() as client:
-            await client.post(
+        conn = await _get_xero_conn(client_id)
+        async with httpx.AsyncClient() as c:
+            await c.post(
                 "https://identity.xero.com/connect/revocation",
-                headers={"Authorization": _basic_auth_header(), "Content-Type": "application/x-www-form-urlencoded"},
-                data={"token": tokens["refresh_token"], "token_type_hint": "refresh_token"},
+                headers={"Authorization": _xero_basic(), "Content-Type": "application/x-www-form-urlencoded"},
+                data={"token": conn["refresh_token"], "token_type_hint": "refresh_token"},
             )
     except Exception:
-        pass  # still clear from DB even if revocation fails
-    supabase.table("xero_tokens").delete().neq("id", 0).execute()
+        pass
+    await supabase.table("xero_connections").delete().eq("client_id", client_id).execute()
     return {"success": True}
 
 
-@app.get("/api/auth/xero/status")
-async def xero_status():
-    try:
-        _get_tokens()
-        return {"connected": True}
-    except HTTPException:
-        return {"connected": False}
-
-# ── Supabase → Xero Sync ──────────────────────────────────────────────────────
-
-async def _sync_customer_to_xero(customer: dict):
-    """Create a Xero Contact + Invoice for a single customer row."""
-    # 1. Create / upsert Contact
-    contact_payload = {
-        "Contacts": [{"Name": customer["name"], "EmailAddress": customer.get("email", "")}]
-    }
-    contact_resp = await _xero_post("Contacts", contact_payload)
-    contact_id = contact_resp["Contacts"][0]["ContactID"]
-
-    # 2. Create Invoice
-    invoice_payload = {
-        "Invoices": [{
-            "Type": "ACCREC",
-            "Contact": {"ContactID": contact_id},
-            "LineItems": [{"Description": "Service", "Quantity": 1, "UnitAmount": customer["amount"]}],
-            "Status": "AUTHORISED",
-        }]
-    }
-    inv_resp = await _xero_post("Invoices", invoice_payload)
-    invoice_id = inv_resp["Invoices"][0]["InvoiceID"]
-
-    # 3. Update Supabase row with Xero IDs
-    supabase.table("customers").update({
-        "xero_contact_id": contact_id,
-        "xero_invoice_id": invoice_id,
-        "invoice_status":  "synced",
-    }).eq("id", customer["id"]).execute()
+@app.get("/api/xero/status")
+async def xero_status(user: dict = Depends(require_client)):
+    client_id = user["client_id"]
+    row = await supabase.table("xero_connections").select("xero_tenant_id,updated_at").eq("client_id", client_id).execute()
+    return {"connected": bool(row.data), "updated_at": row.data[0]["updated_at"] if row.data else None}
 
 
-@app.post("/api/sync/customers")
-async def sync_all_customers(background_tasks: BackgroundTasks):
-    """Sync all unsynced customers from Supabase to Xero."""
-    rows = supabase.table("customers").select("*").neq("invoice_status", "synced").execute()
-    for customer in rows.data:
-        background_tasks.add_task(_sync_customer_to_xero, customer)
-    return {"queued": len(rows.data)}
-
-
-@app.post("/api/sync/webhook")
-async def supabase_webhook(payload: dict, background_tasks: BackgroundTasks):
-    """
-    Supabase Database Webhook endpoint.
-    Configure in Supabase: Table → customers → Insert event → POST http://your-backend/api/sync/webhook
-    """
-    record = payload.get("record")
-    if record:
-        background_tasks.add_task(_sync_customer_to_xero, record)
-    return {"status": "accepted"}
-
-# ── Analytics ────────────────────────────────────────────────────────────────
-import re
-from datetime import date, timedelta
+# ── Analytics helpers ─────────────────────────────────────────────────────────
 
 def _parse_xero_date(val: str) -> date:
-    """Parse Xero /Date(ms)/ or ISO string to date."""
     if not val:
         return date.today()
     ms = re.search(r"/Date\((\d+)", val)
@@ -387,20 +501,17 @@ def _parse_xero_date(val: str) -> date:
     except Exception:
         return date.today()
 
-
 def _age_bucket(days: int) -> str:
     if days <= 0:  return "current"
     if days <= 30: return "1-30"
     if days <= 60: return "31-60"
     return "60+"
 
-
 def _bucket_invoices(invoices: list, today: date) -> list:
     contacts: dict = {}
     for inv in invoices:
         due  = _parse_xero_date(inv.get("DueDateString") or inv.get("DueDate", ""))
-        days = (today - due).days
-        bkt  = _age_bucket(days)
+        bkt  = _age_bucket((today - due).days)
         name = inv.get("Contact", {}).get("Name", "Unknown")
         if name not in contacts:
             contacts[name] = {"contact": name, "current": 0.0, "1-30": 0.0, "31-60": 0.0, "60+": 0.0, "total": 0.0}
@@ -410,24 +521,37 @@ def _bucket_invoices(invoices: list, today: date) -> list:
     return sorted(contacts.values(), key=lambda x: -x["total"])
 
 
-@app.get("/api/analytics/aged-receivables")
-async def analytics_aged_receivables(contact_id: Optional[str] = None):
-    today = date.today()
-    query = _contact_query(contact_id)
-    data  = await _xero_get(f"Invoices?{query}Statuses=AUTHORISED&Type=ACCREC&order=DueDate DESC")
-    return _bucket_invoices(data.get("Invoices", []), today)
+def _aged_report(invoices: list, title: str) -> dict:
+    buckets = _bucket_invoices(invoices, date.today())
+    rows = [{"Cells": [{"Value": "Contact"}, {"Value": "Current"}, {"Value": "1-30"}, {"Value": "31-60"}, {"Value": "60+"}, {"Value": "Total"}]}]
+    rows.append({"Rows": [{"Cells": [{"Value": bucket["contact"]}, {"Value": f"{bucket['current']:.2f}"}, {"Value": f"{bucket['1-30']:.2f}"}, {"Value": f"{bucket['31-60']:.2f}"}, {"Value": f"{bucket['60+']:.2f}"}, {"Value": f"{bucket['total']:.2f}"}]} for bucket in buckets]})
+    return {"Reports": [{"ReportName": title, "Rows": rows}]}
 
+def _resolve_client(user: dict, client_id_param: Optional[str]) -> str:
+    """Admin can pass any client_id; client role always uses their own."""
+    if user["role"] == "super_admin":
+        if not client_id_param:
+            raise HTTPException(status_code=400, detail="Admin must supply client_id")
+        return client_id_param
+    return user["client_id"]
+
+# ── Analytics endpoints ───────────────────────────────────────────────────────
+
+@app.get("/api/analytics/aged-receivables")
+async def analytics_aged_receivables(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCREC&order=DueDate DESC")
+    return _bucket_invoices(data.get("Invoices", []), date.today())
 
 @app.get("/api/analytics/aged-payables")
-async def analytics_aged_payables(contact_id: Optional[str] = None):
-    today = date.today()
-    query = _contact_query(contact_id)
-    data  = await _xero_get(f"Invoices?{query}Statuses=AUTHORISED&Type=ACCPAY&order=DueDate DESC")
-    return _bucket_invoices(data.get("Invoices", []), today)
-
+async def analytics_aged_payables(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCPAY&order=DueDate DESC")
+    return _bucket_invoices(data.get("Invoices", []), date.today())
 
 @app.get("/api/analytics/cashflow")
-async def analytics_cashflow(contact_id: Optional[str] = None):
+async def analytics_cashflow(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid    = _resolve_client(user, client_id)
     today  = date.today()
     result = []
     for i in range(11, -1, -1):
@@ -436,279 +560,234 @@ async def analytics_cashflow(contact_id: Optional[str] = None):
         from_d   = date(year, month, 1)
         last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - timedelta(days=1)
         inflow = outflow = 0.0
-        if contact_id:
-            try:
-                sales = await _xero_get(f"Invoices?{_contact_query(contact_id)}Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
-                inflow = sum(float(inv.get("Total", 0)) for inv in sales.get("Invoices", []))
-            except Exception:
-                pass
-            try:
-                expenses = await _xero_get(f"Invoices?{_contact_query(contact_id)}Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
-                outflow = sum(abs(float(li.get("LineAmount", 0))) for inv in expenses.get("Invoices", []) for li in inv.get("LineItems", []))
-            except Exception:
-                pass
-        else:
-            try:
-                data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
-                for section in data.get("Reports", [{}])[0].get("Rows", []):
-                    for row in section.get("Rows", []):
-                        cells = row.get("Cells", [])
-                        if not cells: continue
-                        label = cells[0].get("Value", "").lower()
-                        val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
-                        if "total income" in label:             inflow  = val
-                        if "total operating expenses" in label: outflow = abs(val)
-            except Exception:
-                pass
-        result.append({"month": from_d.strftime("%b %y"), "inflow": round(inflow, 2), "outflow": round(outflow, 2), "net": round(inflow - outflow, 2)})
-    return result
-
-
-@app.get("/api/analytics/vat")
-async def analytics_vat(contact_id: Optional[str] = None):
-    today   = date.today()
-    periods = []
-    for q in range(3, -1, -1):
-        # compute quarter start/end
-        cur_q      = (today.month - 1) // 3
-        target_q   = cur_q - q
-        year_off   = 0
-        while target_q < 0:
-            target_q += 4
-            year_off -= 1
-        q_year       = today.year + year_off
-        q_start_mon  = target_q * 3 + 1
-        q_end_mon    = q_start_mon + 2
-        from_d       = date(q_year, q_start_mon, 1)
-        last_day     = (date(q_year, q_end_mon % 12 + 1, 1) if q_end_mon < 12 else date(q_year + 1, 1, 1)) - timedelta(days=1)
-        vat_collected = vat_paid = 0.0
-        if contact_id:
-            try:
-                sales = await _xero_get(f"Invoices?{_contact_query(contact_id)}Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
-                for inv in sales.get("Invoices", []):
-                    for li in inv.get("LineItems", []):
-                        vat_collected += float(li.get("TaxAmount", 0))
-            except Exception:
-                pass
-            try:
-                bills = await _xero_get(f"Invoices?{_contact_query(contact_id)}Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
-                for inv in bills.get("Invoices", []):
-                    for li in inv.get("LineItems", []):
-                        vat_paid += float(li.get("TaxAmount", 0))
-            except Exception:
-                pass
-        else:
-            try:
-                sales = await _xero_get(f"Invoices?Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
-                for inv in sales.get("Invoices", []):
-                    for li in inv.get("LineItems", []):
-                        vat_collected += float(li.get("TaxAmount", 0))
-            except Exception:
-                pass
-            try:
-                bills = await _xero_get(f"Invoices?Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
-                for inv in bills.get("Invoices", []):
-                    for li in inv.get("LineItems", []):
-                        vat_paid += float(li.get("TaxAmount", 0))
-            except Exception:
-                pass
-        periods.append({
-            "period":        f"Q{target_q + 1} {q_year}",
-            "vat_collected": round(vat_collected, 2),
-            "vat_paid":      round(vat_paid, 2),
-            "net_vat":       round(vat_collected - vat_paid, 2),
-        })
-    return periods
-
-
-@app.get("/api/analytics/top")
-async def analytics_top(contact_id: Optional[str] = None):
-    today  = date.today()
-    from_d = date(today.year, 1, 1)
-    customers: dict = {}
-    try:
-        query = _contact_query(contact_id)
-        sales = await _xero_get(f"Invoices?{query}Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
-        for inv in sales.get("Invoices", []):
-            name = inv.get("Contact", {}).get("Name", "Unknown")
-            customers[name] = customers.get(name, 0.0) + float(inv.get("Total", 0))
-    except Exception:
-        pass
-    expenses: dict = {}
-    try:
-        query = _contact_query(contact_id)
-        bills = await _xero_get(f"Invoices?{query}Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
-        for inv in bills.get("Invoices", []):
-            for li in inv.get("LineItems", []):
-                cat = li.get("Description") or li.get("AccountCode") or "Other"
-                expenses[cat] = expenses.get(cat, 0.0) + float(li.get("LineAmount", 0))
-    except Exception:
-        pass
-    return {
-        "top_customers": sorted([{"name": k, "value": round(v, 2)} for k, v in customers.items()], key=lambda x: -x["value"])[:10],
-        "top_expenses":  sorted([{"name": k, "value": round(v, 2)} for k, v in expenses.items()],  key=lambda x: -x["value"])[:10],
-    }
-
-
-@app.get("/api/analytics/budget")
-async def analytics_budget(contact_id: Optional[str] = None):
-    today  = date.today()
-    from_d = date(today.year, 1, 1)
-    budget = actual = None
-    if contact_id:
         try:
-            actual = await _xero_get(f"Invoices?{_contact_query(contact_id)}Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
-        except Exception:
-            actual = None
-    else:
-        try:
-            budget = await _xero_get(f"Reports/BudgetSummary?date={today}&periods=12&timeframe=1")
-        except Exception:
-            pass
-        try:
-            actual = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={today}")
-        except Exception:
-            pass
-    return {"budget": budget, "actual": actual}
-
-
-@app.post("/api/analytics/sync")
-async def analytics_sync(contact_id: Optional[str] = None):
-    """Fetch all analytics from Xero and cache in Supabase. Call nightly or per client."""
-    import asyncio
-    aged_rec, aged_pay, cashflow, vat, top = await asyncio.gather(
-        analytics_aged_receivables(contact_id),
-        analytics_aged_payables(contact_id),
-        analytics_cashflow(contact_id),
-        analytics_vat(contact_id),
-        analytics_top(contact_id),
-        return_exceptions=True,
-    )
-    saved = []
-    key_prefix = f"{contact_id}:" if contact_id else ""
-    for key, val in [("aged_receivables", aged_rec), ("aged_payables", aged_pay),
-                     ("cashflow", cashflow), ("vat", vat), ("top", top)]:
-        if isinstance(val, Exception):
-            continue
-        cache_key = f"{key_prefix}{key}"
-        supabase.table("analytics_cache").upsert(
-            {"key": cache_key, "data": val, "updated_at": datetime.utcnow().isoformat()}
-        ).execute()
-        saved.append(cache_key)
-    return {"synced": saved}
-
-
-@app.get("/api/analytics/cached/{key}")
-async def analytics_cached(key: str, contact_id: Optional[str] = None):
-    cache_key = f"{contact_id}:{key}" if contact_id else key
-    try:
-        row = supabase.table("analytics_cache").select("data,updated_at").eq("key", cache_key).execute()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cache read failed: {e}")
-    if not row.data:
-        raise HTTPException(status_code=404, detail="No cached data — run /api/analytics/sync first.")
-    return {"data": row.data[0]["data"], "updated_at": row.data[0]["updated_at"]}
-
-
-# ── Reports ───────────────────────────────────────────────────────────────────
-
-@app.get("/api/reports/monthly")
-async def monthly_report():
-    """Returns last 6 months revenue and expenses for the dashboard chart."""
-    from datetime import date, timedelta
-    today = date.today()
-    result = []
-    for i in range(5, -1, -1):
-        month = (today.month - i - 1) % 12 + 1
-        year  = today.year - ((today.month - i - 1) // 12)
-        from_d   = date(year, month, 1)
-        last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - timedelta(days=1)
-        try:
-            data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
-            revenue = expenses = 0.0
+            data = await _xero_get(cid, f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
             for section in data.get("Reports", [{}])[0].get("Rows", []):
                 for row in section.get("Rows", []):
                     cells = row.get("Cells", [])
                     if not cells: continue
                     label = cells[0].get("Value", "").lower()
                     val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
-                    if "total income" in label:            revenue  = val
-                    if "total operating expenses" in label: expenses = val
+                    if "total income" in label:             inflow  = val
+                    if "total operating expenses" in label: outflow = abs(val)
         except Exception:
-            revenue = expenses = 0.0
+            pass
+        result.append({"month": from_d.strftime("%b %y"), "inflow": round(inflow, 2), "outflow": round(outflow, 2), "net": round(inflow - outflow, 2)})
+    return result
+
+@app.get("/api/analytics/vat")
+async def analytics_vat(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid     = _resolve_client(user, client_id)
+    today   = date.today()
+    periods = []
+    for q in range(3, -1, -1):
+        cur_q     = (today.month - 1) // 3
+        target_q  = cur_q - q
+        year_off  = 0
+        while target_q < 0:
+            target_q += 4; year_off -= 1
+        q_year      = today.year + year_off
+        q_start_mon = target_q * 3 + 1
+        q_end_mon   = q_start_mon + 2
+        from_d      = date(q_year, q_start_mon, 1)
+        last_day    = (date(q_year, q_end_mon % 12 + 1, 1) if q_end_mon < 12 else date(q_year + 1, 1, 1)) - timedelta(days=1)
+        vat_collected = vat_paid = 0.0
+        try:
+            sales = await _xero_get(cid, f"Invoices?Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
+            for inv in sales.get("Invoices", []):
+                for li in inv.get("LineItems", []):
+                    vat_collected += float(li.get("TaxAmount", 0))
+        except Exception: pass
+        try:
+            bills = await _xero_get(cid, f"Invoices?Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={last_day}")
+            for inv in bills.get("Invoices", []):
+                for li in inv.get("LineItems", []):
+                    vat_paid += float(li.get("TaxAmount", 0))
+        except Exception: pass
+        periods.append({"period": f"Q{target_q + 1} {q_year}", "vat_collected": round(vat_collected, 2), "vat_paid": round(vat_paid, 2), "net_vat": round(vat_collected - vat_paid, 2)})
+    return periods
+
+@app.get("/api/analytics/top")
+async def analytics_top(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid    = _resolve_client(user, client_id)
+    today  = date.today()
+    from_d = date(today.year, 1, 1)
+    customers: dict = {}
+    expenses:  dict = {}
+    try:
+        sales = await _xero_get(cid, f"Invoices?Type=ACCREC&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
+        for inv in sales.get("Invoices", []):
+            n = inv.get("Contact", {}).get("Name", "Unknown")
+            customers[n] = customers.get(n, 0.0) + float(inv.get("Total", 0))
+    except Exception: pass
+    try:
+        bills = await _xero_get(cid, f"Invoices?Type=ACCPAY&Statuses=AUTHORISED,PAID&DateFrom={from_d}&DateTo={today}")
+        for inv in bills.get("Invoices", []):
+            for li in inv.get("LineItems", []):
+                cat = li.get("Description") or li.get("AccountCode") or "Other"
+                expenses[cat] = expenses.get(cat, 0.0) + float(li.get("LineAmount", 0))
+    except Exception: pass
+    return {
+        "top_customers": sorted([{"name": k, "value": round(v, 2)} for k, v in customers.items()], key=lambda x: -x["value"])[:10],
+        "top_expenses":  sorted([{"name": k, "value": round(v, 2)} for k, v in expenses.items()],  key=lambda x: -x["value"])[:10],
+    }
+
+@app.get("/api/analytics/budget")
+async def analytics_budget(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid    = _resolve_client(user, client_id)
+    today  = date.today()
+    from_d = date(today.year, 1, 1)
+    budget = actual = None
+    try:
+        budget = await _xero_get(cid, f"Reports/BudgetSummary?date={today}&periods=12&timeframe=1")
+    except Exception: pass
+    try:
+        actual = await _xero_get(cid, f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={today}")
+    except Exception: pass
+    return {"budget": budget, "actual": actual}
+
+
+# ── Analytics cache (sync + serve) ───────────────────────────────────────────
+
+@app.post("/api/analytics/sync")
+async def analytics_sync(client_id: Optional[str] = None, user=Depends(require_client)):
+    import asyncio
+    cid = _resolve_client(user, client_id)
+    aged_rec, aged_pay, cashflow, vat, top = await asyncio.gather(
+        analytics_aged_receivables(cid, user),
+        analytics_aged_payables(cid, user),
+        analytics_cashflow(cid, user),
+        analytics_vat(cid, user),
+        analytics_top(cid, user),
+        return_exceptions=True,
+    )
+    saved = []
+    for key, val in [("aged_receivables", aged_rec), ("aged_payables", aged_pay),
+                     ("cashflow", cashflow), ("vat", vat), ("top", top)]:
+        if isinstance(val, Exception):
+            continue
+        await supabase.table("analytics_cache").upsert(
+            {"client_id": cid, "key": key, "data": val, "updated_at": datetime.utcnow().isoformat()},
+            on_conflict="client_id,key"
+        ).execute()
+        saved.append(key)
+    return {"synced": saved}
+
+
+@app.get("/api/analytics/cached/{key}")
+async def analytics_cached(key: str, client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    row = await supabase.table("analytics_cache").select("data,updated_at").eq("client_id", cid).eq("key", key).execute()
+    if not row.data:
+        raise HTTPException(status_code=404, detail="No cached data — run /api/analytics/sync first.")
+    return {"data": row.data[0]["data"], "updated_at": row.data[0]["updated_at"]}
+
+# ── Reports ───────────────────────────────────────────────────────────────────
+
+@app.get("/api/reports/profit-and-loss")
+async def profit_and_loss(from_date: str, to_date: str, client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    return await _xero_get(cid, f"Reports/ProfitAndLoss?fromDate={from_date}&toDate={to_date}")
+
+@app.get("/api/reports/balance-sheet")
+async def balance_sheet(report_date: str, client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    return await _xero_get(cid, f"Reports/BalanceSheet?date={report_date}")
+
+@app.get("/api/reports/monthly")
+async def monthly_report(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid    = _resolve_client(user, client_id)
+    today  = date.today()
+    result = []
+    for i in range(5, -1, -1):
+        month    = (today.month - i - 1) % 12 + 1
+        year     = today.year - ((today.month - i - 1) // 12)
+        from_d   = date(year, month, 1)
+        last_day = (date(year, month % 12 + 1, 1) if month < 12 else date(year + 1, 1, 1)) - timedelta(days=1)
+        revenue = expenses = 0.0
+        try:
+            data = await _xero_get(cid, f"Reports/ProfitAndLoss?fromDate={from_d}&toDate={last_day}")
+            for section in data.get("Reports", [{}])[0].get("Rows", []):
+                for row in section.get("Rows", []):
+                    cells = row.get("Cells", [])
+                    if not cells: continue
+                    label = cells[0].get("Value", "").lower()
+                    val   = float(cells[1].get("Value") or 0) if len(cells) > 1 else 0
+                    if "total income" in label:             revenue  = val
+                    if "total operating expenses" in label: expenses = val
+        except Exception: pass
         result.append({"name": from_d.strftime("%b"), "revenue": revenue, "expenses": expenses})
     return result
 
 
-@app.get("/api/reports/profit-and-loss")
-async def profit_and_loss(from_date: str = "2023-01-01", to_date: str = "2023-12-31"):
-    data = await _xero_get(f"Reports/ProfitAndLoss?fromDate={from_date}&toDate={to_date}")
-    return data
-
-
-@app.get("/api/reports/balance-sheet")
-async def balance_sheet(date: str = "2023-12-31"):
-    data = await _xero_get(f"Reports/BalanceSheet?date={date}")
-    return data
-
-
 @app.get("/api/reports/aged-receivables")
-async def aged_receivables():
-    data = await _xero_get("Reports/AgedReceivablesByContact")
-    return data
+async def aged_receivables(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCREC&order=DueDate DESC")
+    return _aged_report(data.get("Invoices", []), "Aged Receivables")
 
 
 @app.get("/api/reports/aged-payables")
-async def aged_payables():
-    data = await _xero_get("Reports/AgedPayablesByContact")
-    return data
+async def aged_payables(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id)
+    data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCPAY&order=DueDate DESC")
+    return _aged_report(data.get("Invoices", []), "Aged Payables")
 
-# ── Dashboard KPIs ────────────────────────────────────────────────────────────
 
-@app.get("/api/dashboard/kpis")
-async def dashboard_kpis():
-    pl = await _xero_get("Reports/ProfitAndLoss?fromDate=2026-01-01&toDate=2026-12-31")
-    bs = await _xero_get("Reports/BalanceSheet?date=2026-12-31")
-    return {"profit_and_loss": pl, "balance_sheet": bs}
+@app.get("/api/reports/{report_type}")
+async def report_data(report_type: str, client_id: Optional[str] = None, user=Depends(require_client)):
+    if report_type not in REPORT_MAP:
+        raise HTTPException(status_code=404, detail="Unknown report type")
+    cid = _resolve_client(user, client_id)
+    path = REPORT_MAP[report_type]
+    if report_type == "profit-and-loss":
+        today = date.today()
+        path += f"?fromDate={today.year}-01-01&toDate={today}"
+    elif report_type == "balance-sheet":
+        path += f"?date={date.today()}"
+    elif report_type in ("aged-receivables", "aged-payables"):
+        path += f"?date={date.today()}"
+    return await _xero_get(cid, path)
 
-# ── Export Helpers ────────────────────────────────────────────────────────────
+# ── Export (PDF / Excel) ──────────────────────────────────────────────────────
 
-def _extract_rows(report_json: dict) -> tuple[str, list[list]]:
-    """Pull title and flat rows from a Xero report JSON."""
+REPORT_MAP = {
+    "profit-and-loss":  "Reports/ProfitAndLoss",
+    "balance-sheet":    "Reports/BalanceSheet",
+    "aged-receivables": "Reports/AgedReceivablesByContact",
+    "aged-payables":    "Reports/AgedPayablesByContact",
+}
+
+def _extract_rows(report_json: dict):
     reports = report_json.get("Reports", [{}])
     title   = reports[0].get("ReportTitles", ["Report"])[0] if reports else "Report"
-    rows: list[list] = []
+    rows    = []
     for section in reports[0].get("Rows", []):
         for row in section.get("Rows", [section]):
-            cells = row.get("Cells", [])
-            rows.append([c.get("Value", "") for c in cells])
+            rows.append([c.get("Value", "") for c in row.get("Cells", [])])
     return title, rows
 
-
 @app.get("/api/reports/{report_type}/export/pdf")
-async def export_pdf(report_type: str):
-    report_map = {
-        "profit-and-loss":  "Reports/ProfitAndLoss",
-        "balance-sheet":    "Reports/BalanceSheet",
-        "aged-receivables": "Reports/AgedReceivablesByContact",
-        "aged-payables":    "Reports/AgedPayablesByContact",
-    }
-    if report_type not in report_map:
+async def export_pdf(report_type: str, client_id: Optional[str] = None, user=Depends(require_client)):
+    if report_type not in REPORT_MAP:
         raise HTTPException(status_code=404, detail="Unknown report type")
-
-    data = await _xero_get(report_map[report_type])
+    cid = _resolve_client(user, client_id)
+    if report_type == "aged-receivables":
+        invoice_data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCREC&order=DueDate DESC")
+        data = _aged_report(invoice_data.get("Invoices", []), "Aged Receivables")
+    elif report_type == "aged-payables":
+        invoice_data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCPAY&order=DueDate DESC")
+        data = _aged_report(invoice_data.get("Invoices", []), "Aged Payables")
+    else:
+        data = await _xero_get(cid, REPORT_MAP[report_type])
     title, rows = _extract_rows(data)
-
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4)
     styles = getSampleStyleSheet()
-    elements = [
-        Paragraph(title, styles["Title"]),
-        Spacer(1, 12),
-    ]
+    elements = [Paragraph(title, styles["Title"]), Spacer(1, 12)]
     if rows:
-        table = Table(rows)
-        table.setStyle(TableStyle([
+        t = Table(rows)
+        t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563EB")),
             ("TEXTCOLOR",  (0, 0), (-1, 0), colors.white),
             ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
@@ -717,80 +796,154 @@ async def export_pdf(report_type: str):
             ("FONTSIZE",   (0, 0), (-1, -1), 8),
             ("PADDING",    (0, 0), (-1, -1), 6),
         ]))
-        elements.append(table)
+        elements.append(t)
     doc.build(elements)
     buf.seek(0)
-
-    return StreamingResponse(
-        buf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={report_type}.pdf"},
-    )
-
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={report_type}.pdf"})
 
 @app.get("/api/reports/{report_type}/export/excel")
-async def export_excel(report_type: str):
-    report_map = {
-        "profit-and-loss":  "Reports/ProfitAndLoss",
-        "balance-sheet":    "Reports/BalanceSheet",
-        "aged-receivables": "Reports/AgedReceivablesByContact",
-        "aged-payables":    "Reports/AgedPayablesByContact",
-    }
-    if report_type not in report_map:
+async def export_excel(report_type: str, client_id: Optional[str] = None, user=Depends(require_client)):
+    if report_type not in REPORT_MAP:
         raise HTTPException(status_code=404, detail="Unknown report type")
-
-    data = await _xero_get(report_map[report_type])
+    cid = _resolve_client(user, client_id)
+    if report_type == "aged-receivables":
+        invoice_data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCREC&order=DueDate DESC")
+        data = _aged_report(invoice_data.get("Invoices", []), "Aged Receivables")
+    elif report_type == "aged-payables":
+        invoice_data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED&Type=ACCPAY&order=DueDate DESC")
+        data = _aged_report(invoice_data.get("Invoices", []), "Aged Payables")
+    else:
+        data = await _xero_get(cid, REPORT_MAP[report_type])
     title, rows = _extract_rows(data)
-
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = title[:31]  # Excel sheet name limit
+    ws.title = title[:31]
     for row in rows:
         ws.append(row)
-
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-
-    return StreamingResponse(
-        buf,
+    return StreamingResponse(buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={report_type}.xlsx"},
-    )
+        headers={"Content-Disposition": f"attachment; filename={report_type}.xlsx"})
 
-# ── Invoices ──────────────────────────────────────────────────────────────────
+# ── Client portal (invoices for logged-in client) ─────────────────────────────
 
-@app.get("/api/users")
-async def get_users():
-    """Fetch contacts (users/clients) from Xero."""
-    data = await _xero_get("Contacts?includeArchived=false&order=Name ASC")
-    contacts = data.get("Contacts", [])
+@app.get("/api/portal/invoices")
+async def portal_invoices(client_id: Optional[str] = None, user=Depends(require_client)):
+    cid = _resolve_client(user, client_id) if user["role"] == "super_admin" else user.get("client_id")
+    if not cid:
+        return {"invoices": [], "stats": {"total": 0, "paid": 0, "outstanding": 0}}
+    try:
+        data = await _xero_get(cid, "Invoices?Statuses=AUTHORISED,PAID,VOIDED&order=DueDate DESC")
+        inv_list = data.get("Invoices", [])
+    except Exception:
+        inv_list = []
+    paid        = sum(1 for i in inv_list if i.get("Status") == "PAID")
+    outstanding = sum(float(i.get("AmountDue", 0)) for i in inv_list if i.get("Status") == "AUTHORISED")
+    return {"invoices": inv_list, "stats": {"total": len(inv_list), "paid": paid, "outstanding": round(outstanding, 2)}}
+
+# ── Admin: all clients combined view ─────────────────────────────────────────
+
+@app.get("/api/admin/overview")
+async def admin_overview(_=Depends(require_admin)):
+    clients = await supabase.table("clients").select("id,name,email,is_active").execute()
+    conns   = await supabase.table("xero_connections").select("client_id,updated_at").execute()
+    conn_map = {c["client_id"]: c["updated_at"] for c in conns.data}
     return [
-        {
-            "id":          c.get("ContactID"),
-            "name":        c.get("Name"),
-            "email":       c.get("EmailAddress"),
-            "phone":       c.get("Phones", [{}])[0].get("PhoneNumber", "") if c.get("Phones") else "",
-            "status":      c.get("ContactStatus"),
-            "is_customer": c.get("IsCustomer", False),
-            "is_supplier": c.get("IsSupplier", False),
-            "balance":     c.get("Balances", {}).get("AccountsReceivable", {}).get("Outstanding", 0),
-            "city":        c.get("Addresses", [{}])[0].get("City", "") if c.get("Addresses") else "",
-        }
-        for c in contacts
+        {**cl, "xero_connected": cl["id"] in conn_map, "last_sync": conn_map.get(cl["id"])}
+        for cl in clients.data
     ]
 
 
-@app.get("/api/invoices")
-async def get_invoices(status: str = "AUTHORISED"):
-    data = await _xero_get(f"Invoices?Statuses={status}&order=DueDate DESC")
-    return data.get("Invoices", [])
+@app.get("/api/admin/financial-overview")
+async def admin_financial_overview(_=Depends(require_admin)):
+    clients = await supabase.table("clients").select("id,name").execute()
+    connected = await supabase.table("xero_connections").select("client_id").execute()
+    client_names = {client["id"]: client["name"] for client in clients.data}
+    client_ids = [connection["client_id"] for connection in connected.data]
 
+    def report_value(report: dict, label: str) -> float:
+        for section in report.get("Reports", [{}])[0].get("Rows", []):
+            for row in section.get("Rows", []):
+                cells = row.get("Cells", [])
+                if cells and cells[0].get("Value", "").lower() == label.lower():
+                    try:
+                        return float(str(cells[1].get("Value", 0)).replace(",", ""))
+                    except (IndexError, TypeError, ValueError):
+                        return 0
+        return 0
+
+    async def load_client(client_id: str) -> tuple[dict, list[dict]]:
+        import asyncio
+        today = date.today()
+        try:
+            report, invoices, balance = await asyncio.gather(
+                _xero_get(client_id, f"Reports/ProfitAndLoss?fromDate={today.year}-01-01&toDate={today}"),
+                _xero_get(client_id, "Invoices?Statuses=AUTHORISED,PAID,VOIDED&order=DueDate DESC"),
+                _xero_get(client_id, f"Reports/BalanceSheet?date={today}"),
+            )
+        except Exception:
+            return {"income": 0, "expenses": 0, "profit": 0, "bank": 0}, []
+        summary = {
+            "income": report_value(report, "Total Income"),
+            "expenses": report_value(report, "Total Operating Expenses"),
+            "profit": report_value(report, "Net Profit"),
+            "bank": report_value(balance, "Total Assets"),
+        }
+        client_invoices = [
+            {**invoice, "client_id": client_id, "client_name": client_names.get(client_id, "")}
+            for invoice in invoices.get("Invoices", [])
+        ]
+        return summary, client_invoices
+
+    import asyncio
+    results = await asyncio.gather(*(load_client(client_id) for client_id in client_ids))
+    totals = {
+        "income": sum(result[0]["income"] for result in results),
+        "expenses": sum(result[0]["expenses"] for result in results),
+        "profit": sum(result[0]["profit"] for result in results),
+        "bank": sum(result[0]["bank"] for result in results),
+    }
+    invoices = [invoice for _, client_invoices in results for invoice in client_invoices]
+    invoices.sort(key=lambda invoice: invoice.get("DueDateString") or invoice.get("DueDate", ""))
+    today = date.today()
+    monthly = []
+    for month_offset in range(5, -1, -1):
+        month_number = (today.month - month_offset - 1) % 12 + 1
+        month_year = today.year - ((today.month - month_offset - 1) // 12)
+        month_start = date(month_year, month_number, 1)
+        next_month = date(month_year + 1, 1, 1) if month_number == 12 else date(month_year, month_number + 1, 1)
+        revenue = expenses = 0.0
+        for invoice in invoices:
+            invoice_date = _parse_xero_date(invoice.get("DateString") or invoice.get("Date", ""))
+            if month_start <= invoice_date < next_month:
+                if invoice.get("Type") == "ACCREC":
+                    revenue += float(invoice.get("Total", 0) or 0)
+                elif invoice.get("Type") == "ACCPAY":
+                    expenses += float(invoice.get("Total", 0) or 0)
+        monthly.append({"name": month_start.strftime("%b"), "revenue": revenue, "expenses": expenses})
+    return {
+        "invoices": invoices[:5],
+        "profit_and_loss": {"Reports": [{"Rows": [{"Cells": [
+            {"Value": "Total Income"}, {"Value": str(totals["income"])}
+        ]}, {"Cells": [
+            {"Value": "Total Operating Expenses"}, {"Value": str(totals["expenses"])}
+        ]}, {"Cells": [
+            {"Value": "Net Profit"}, {"Value": str(totals["profit"])}
+        ]}]}]},
+        "balance_sheet": {"Reports": [{"Rows": [{"Cells": [
+            {"Value": "Total Assets"}, {"Value": str(totals["bank"])}
+        ]}]}]},
+        "monthly": monthly,
+    }
+
+# ── Root ──────────────────────────────────────────────────────────────────────
 
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "Wealcco API is running"}
-
 
 if __name__ == "__main__":
     import uvicorn

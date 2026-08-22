@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
-    FileText, Loader2, CheckCircle2, Clock, AlertCircle, DollarSign, TrendingUp
+    FileText, Loader2, CheckCircle2, Clock, AlertCircle, DollarSign, TrendingUp, LogOut
 } from 'lucide-react';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -9,10 +9,10 @@ import {
 } from 'recharts';
 import './ClientPortal.css';
 
-const API = 'https://acadmin-seven.vercel.app';
+const API = import.meta.env.VITE_API_URL || 'https://acadmin-seven.vercel.app';
 
-const fmt    = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-const fmtFull= (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
+const fmt    = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const fmtFull= (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 const fmtDate = (val) => {
     if (!val) return '—';
@@ -96,11 +96,20 @@ export default function ClientPortal() {
         if (!stored) { navigate('/'); return; }
         const u = JSON.parse(stored);
         setUser(u);
-        fetch(`${API}/api/user/portal?contact_id=${u.xero_contact_id}`)
-            .then(r => r.json())
+        fetch(`${API}/api/portal/invoices`, {
+            headers: { 'Authorization': `Bearer ${u.token}` },
+        })
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
             .then(d => setInvoices(d.invoices || []))
+            .catch(() => { localStorage.removeItem('portal_user'); navigate('/'); })
             .finally(() => setLoading(false));
     }, [navigate]);
+
+    const handleLogout = () => {
+        localStorage.removeItem('portal_user');
+        window.dispatchEvent(new Event('storage'));
+        navigate('/');
+    };
 
     if (!user) return null;
 
@@ -131,6 +140,9 @@ export default function ClientPortal() {
                         <h1 className="cp-welcome">Welcome back, {user.name}</h1>
                         <p className="cp-email">{user.email}</p>
                     </div>
+                    <button className="cp-logout-btn" onClick={handleLogout} title="Logout">
+                        <LogOut size={16} /> Logout
+                    </button>
                 </div>
             </div>
 
@@ -180,7 +192,7 @@ export default function ClientPortal() {
                                             <BarChart data={monthlyData} barGap={4}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
                                                 <Tooltip content={<CustomTooltip />} />
                                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }} />
                                                 <Bar dataKey="billed"  name="Billed"  fill="#3b82f6" radius={[4,4,0,0]} />
@@ -243,7 +255,7 @@ export default function ClientPortal() {
                                     <LineChart data={trendData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
                                         <Tooltip content={<CustomTooltip />} />
                                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                                         <Line type="monotone" dataKey="cumulative" name="Cumulative Total" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4, fill: '#2563eb' }} activeDot={{ r: 6 }} />

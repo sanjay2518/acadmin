@@ -10,9 +10,9 @@ import {
 } from 'recharts';
 import './PortalAnalytics.css';
 
-const API = 'https://acadmin-seven.vercel.app'; // --- IGNORE ---
+const API = import.meta.env.VITE_API_URL || 'https://acadmin-seven.vercel.app'; // --- IGNORE ---
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
-const fmt = (n) => `£${Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 // ── Shared components ─────────────────────────────────────────────────────────
 
@@ -114,19 +114,19 @@ export default function PortalAnalytics() {
         setUser(JSON.parse(stored));
     }, [navigate]);
 
-    const fetchAll = useCallback(async (contactId) => {
-        const query = contactId ? `?contact_id=${encodeURIComponent(contactId)}` : '';
+    const fetchAll = useCallback(async (token) => {
+        const headers = { 'Authorization': `Bearer ${token}` };
         const calls = [
-            [`${API}/api/analytics/aged-receivables${query}`, setAgedRec,  'agedRec'],
-            [`${API}/api/analytics/aged-payables${query}`,    setAgedPay,  'agedPay'],
-            [`${API}/api/analytics/cashflow${query}`,         setCashflow, 'cashflow'],
-            [`${API}/api/analytics/vat${query}`,              setVat,      'vat'],
-            [`${API}/api/analytics/top${query}`,              setTop,      'top'],
-            [`${API}/api/analytics/budget${query}`,          setBudget,   'budget'],
+            [`${API}/api/analytics/aged-receivables`, setAgedRec,  'agedRec'],
+            [`${API}/api/analytics/aged-payables`,    setAgedPay,  'agedPay'],
+            [`${API}/api/analytics/cashflow`,         setCashflow, 'cashflow'],
+            [`${API}/api/analytics/vat`,              setVat,      'vat'],
+            [`${API}/api/analytics/top`,              setTop,      'top'],
+            [`${API}/api/analytics/budget`,           setBudget,   'budget'],
         ];
         await Promise.allSettled(
             calls.map(([url, setter, key]) =>
-                fetch(url)
+                fetch(url, { headers })
                     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
                     .then(d => { setter(key === 'top' || key === 'budget' ? d : (d.data ?? d)); setL(key, false); })
                     .catch(() => setL(key, false))
@@ -136,17 +136,14 @@ export default function PortalAnalytics() {
     }, []);
 
     useEffect(() => {
-        if (user?.xero_contact_id) {
-            fetchAll(user.xero_contact_id);
-        }
+        if (user?.token) fetchAll(user.token);
     }, [fetchAll, user]);
 
     const handleSync = async () => {
         setSyncing(true);
-        const query = user?.xero_contact_id ? `?contact_id=${encodeURIComponent(user.xero_contact_id)}` : '';
-        try { await fetch(`${API}/api/analytics/sync${query}`, { method: 'POST' }); } catch {}
+        try { await fetch(`${API}/api/analytics/sync`, { method: 'POST', headers: { 'Authorization': `Bearer ${user.token}` } }); } catch {}
         Object.keys(loading).forEach(k => setL(k, true));
-        await fetchAll(user?.xero_contact_id);
+        await fetchAll(user.token);
         setSyncing(false);
     };
 
@@ -211,7 +208,7 @@ export default function PortalAnalytics() {
                                 <BarChart data={cashflow} barGap={3}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<Tip />} />
                                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                                     <Bar dataKey="inflow"  name="Inflow"  fill="#16a34a" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
@@ -246,7 +243,7 @@ export default function PortalAnalytics() {
                                     <BarChart data={vat} barGap={4}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                         <Tooltip content={<Tip />} />
                                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                                         <Bar dataKey="vat_collected" name="VAT Collected" fill="#16a34a" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
@@ -267,7 +264,7 @@ export default function PortalAnalytics() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={top.top_customers} layout="vertical" margin={{ left: 4 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                         <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#374151', fontSize: 11 }} width={100} />
                                         <Tooltip content={<Tip />} />
                                         <Bar dataKey="value" name="Revenue" radius={[0, 4, 4, 0]} animationDuration={900} animationEasing="ease">
@@ -310,7 +307,7 @@ export default function PortalAnalytics() {
                                 <BarChart data={budgetRows.slice(0, 12)} barGap={4}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `£${(v / 1000).toFixed(0)}k`} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<Tip />} />
                                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                                     <Bar dataKey="actual" name="Actual" fill="#2563eb" radius={[4, 4, 0, 0]} animationDuration={900} animationEasing="ease" />
