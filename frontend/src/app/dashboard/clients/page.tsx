@@ -103,7 +103,8 @@ export default function ClientsPage() {
   };
 
   const connectXero = (clientId: string) => {
-    window.location.href = `${API}/api/xero/connect/admin/${clientId}`;
+    const token = getToken();
+    window.location.href = `${API}/api/xero/connect/admin/${clientId}?token=${token}`;
   };
 
   return (

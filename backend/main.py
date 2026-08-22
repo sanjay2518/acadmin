@@ -313,7 +313,14 @@ async def xero_connect(user: dict = Depends(require_client)):
 
 
 @app.get("/api/xero/connect/admin/{client_id}")
-async def xero_connect_for_client(client_id: str, _=Depends(require_admin)):
+async def xero_connect_for_client(client_id: str, token: str = Query(...)):
+    # Token passed as query param because this is a browser redirect (can't set headers)
+    try:
+        user = _decode_token(token)
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if user["role"] != "super_admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
     state = secrets.token_urlsafe(32)
     await supabase.table("oauth_states").insert({"state": state, "client_id": client_id}).execute()
     from urllib.parse import quote
