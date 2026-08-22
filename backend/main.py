@@ -36,6 +36,7 @@ SMTP_PORT          = int(os.environ.get("SMTP_PORT", 587))
 SMTP_USER          = os.environ.get("SMTP_USER", "")
 SMTP_PASS          = os.environ.get("SMTP_PASS", "")
 FRONTEND_URL       = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+ADMIN_URL          = os.environ.get("ADMIN_URL", "http://localhost:3000")
 
 XERO_TOKEN_URL   = "https://identity.xero.com/connect/token"
 XERO_CONNECT_URL = "https://api.xero.com/connections"
@@ -322,13 +323,16 @@ async def xero_connect_for_client(client_id: str, token: str = Query(...)):
     if user["role"] != "super_admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     state = secrets.token_urlsafe(32)
-    await supabase.table("oauth_states").insert({"state": state, "client_id": client_id}).execute()
+    await supabase.table("oauth_states").insert({"state": state, "client_id": client_id, "origin": "admin"}).execute()
     from urllib.parse import quote
+    redirect_uri = XERO_REDIRECT_URI.strip()
+    print(f"DEBUG XERO_REDIRECT_URI='{redirect_uri}'")
     url = (
         "https://login.xero.com/identity/connect/authorize"
         f"?response_type=code&client_id={XERO_CLIENT_ID}"
-        f"&redirect_uri={quote(XERO_REDIRECT_URI)}&scope={quote(XERO_SCOPES)}&state={state}"
+        f"&redirect_uri={quote(redirect_uri)}&scope={quote(XERO_SCOPES)}&state={state}"
     )
+    print(f"DEBUG Xero URL={url}")
     return RedirectResponse(url)
 
 
@@ -370,6 +374,10 @@ async def xero_callback(
         "updated_at":     datetime.utcnow().isoformat(),
     }, on_conflict="client_id").execute()
 
+    # If connected via admin flow, redirect back to admin dashboard; else to client portal
+    origin = state_row.data[0].get("origin", "client")
+    if origin == "admin":
+        return RedirectResponse(f"{ADMIN_URL}/dashboard/clients?xero=connected")
     return RedirectResponse(f"{FRONTEND_URL}/portal?xero=connected")
 
 

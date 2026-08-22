@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   UserPlus, Loader2, RefreshCw, CheckCircle2, XCircle,
   ToggleLeft, ToggleRight, Link2, KeyRound, Eye, EyeOff
@@ -23,6 +24,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const searchParams = useSearchParams();
   const [clients, setClients]         = useState<Client[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showForm, setShowForm]       = useState(false);
@@ -40,6 +42,14 @@ export default function ClientsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetting, setResetting]     = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("xero") === "connected") {
+      setSuccess("Xero connected successfully!");
+      // Clean URL without reload
+      window.history.replaceState({}, "", "/dashboard/clients");
+    }
+  }, [searchParams]);
 
   const load = () => {
     setLoading(true);
@@ -104,7 +114,8 @@ export default function ClientsPage() {
 
   const connectXero = (clientId: string) => {
     const token = getToken();
-    window.location.href = `${API}/api/xero/connect/admin/${clientId}?token=${token}`;
+    if (!token) { setError("Session expired — please log out and log back in."); return; }
+    window.location.href = `${API}/api/xero/connect/admin/${clientId}?token=${encodeURIComponent(token)}`;
   };
 
   return (
