@@ -35,7 +35,7 @@ class XeroRedirectTests(unittest.TestCase):
         )
         self.assertEqual(
             main._resolve_redirect_uri(req),
-            "https://localhost:8000/api/xero/callback",
+            "https://acadmin-seven.vercel.app/api/xero/callback",
         )
 
 

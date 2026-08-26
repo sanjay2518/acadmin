@@ -139,6 +139,29 @@ async def _get_xero_conn(client_id: str) -> dict:
     return row.data[0]
 
 
+async def _select_xero_connection(connections: list[dict], client_id: str) -> dict:
+    if not connections:
+        raise HTTPException(status_code=400, detail="No Xero organisation was authorised for this account")
+
+    current = await supabase.table("xero_connections").select("xero_tenant_id").eq("client_id", client_id).execute()
+    current_tenant = current.data[0]["xero_tenant_id"] if current.data else None
+    if current_tenant:
+        matching = next((connection for connection in connections if connection["tenantId"] == current_tenant), None)
+        if matching:
+            return matching
+
+    assigned = await supabase.table("xero_connections").select("xero_tenant_id").execute()
+    assigned_tenants = {row["xero_tenant_id"] for row in assigned.data}
+    available = next((connection for connection in connections if connection["tenantId"] not in assigned_tenants), None)
+    if available:
+        return available
+
+    raise HTTPException(
+        status_code=409,
+        detail="All Xero organisations returned for this login are already connected to another client. Select the client's own organisation in Xero and try again.",
+    )
+
+
 async def _refresh_xero(conn: dict) -> dict:
     if datetime.utcnow().timestamp() < conn["expires_at"] - 60:
         return conn
@@ -269,6 +292,20 @@ async def admin_toggle_client(client_id: str, body: dict, _=Depends(require_admi
     return {"success": True}
 
 
+@app.delete("/api/admin/clients/{client_id}")
+async def admin_delete_client(client_id: str, _=Depends(require_admin)):
+    client = await supabase.table("clients").select("id").eq("id", client_id).execute()
+    if not client.data:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Explicit cleanup keeps deletion safe even if a deployment has older FK constraints.
+    await supabase.table("xero_connections").delete().eq("client_id", client_id).execute()
+    await supabase.table("oauth_states").delete().eq("client_id", client_id).execute()
+    await supabase.table("portal_users").delete().eq("client_id", client_id).execute()
+    await supabase.table("clients").delete().eq("id", client_id).execute()
+    return {"success": True}
+
+
 @app.post("/api/admin/clients/{client_id}/reset-password")
 async def admin_reset_password(client_id: str, body: dict, _=Depends(require_admin)):
     hashed = hashlib.sha256(body["password"].encode()).hexdigest()
@@ -379,6 +416,7 @@ async def xero_connect(request: Request, user: dict = Depends(require_client)):
         "redirect_uri": redirect_uri,
         "scope": XERO_SCOPES,
         "state": state,
+        "prompt": "login",
     })
     return RedirectResponse(url)
 
@@ -405,6 +443,7 @@ async def xero_connect_for_client(request: Request, client_id: str, token: Optio
         "redirect_uri": redirect_uri,
         "scope": XERO_SCOPES,
         "state": state,
+        "prompt": "login",
     })
     return RedirectResponse(url)
 
@@ -444,9 +483,8 @@ async def xero_callback(
         cr = await c.get(XERO_CONNECT_URL, headers={"Authorization": f"Bearer {t['access_token']}", "Accept": "application/json"})
     cr.raise_for_status()
     connections = cr.json()
-    if not connections:
-        raise HTTPException(status_code=400, detail="No Xero organisation was authorised for this account")
-    tenant_id = connections[0]["tenantId"]
+    selected_connection = await _select_xero_connection(connections, client_id)
+    tenant_id = selected_connection["tenantId"]
 
     await supabase.table("xero_connections").upsert({
         "client_id":      client_id,
