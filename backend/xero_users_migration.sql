@@ -28,6 +28,6 @@ values (
 
 -- ─────────────────────────────────────────────────────────────────
 -- To get the Xero Contact ID for a user:
--- GET https://acadmin-seven.vercel.app/api/users
+-- GET http://localhost:8000/api/users
 -- Find the contact by email → copy the "id" field
 -- ─────────────────────────────────────────────────────────────────

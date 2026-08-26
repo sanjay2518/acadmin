@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { Building2, TrendingUp, TrendingDown, DollarSign, Loader2, RefreshCw } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function extractKpiValue(report: any, label: string): number {
   try {
@@ -44,33 +44,19 @@ export default function DashboardPage() {
   const load = () => {
     setLoading(true);
     setError(null);
-    const h = authHeaders();
-    if (!("Authorization" in h)) {
-      fetch(`${API}/api/admin/financial-overview`)
-        .then(r => r.json())
-        .then(d => {
-          setInvoices(Array.isArray(d?.invoices) ? d.invoices : []);
-          setKpis(d?.profit_and_loss ? { profit_and_loss: d.profit_and_loss, balance_sheet: d.balance_sheet } : null);
-          setMonthly(Array.isArray(d?.monthly) ? d.monthly : []);
-          setLastSync(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
-        })
-        .finally(() => setLoading(false));
-      return;
-    }
-    Promise.allSettled([
-      fetch(`${API}/api/portal/invoices`, { headers: h }).then(r => r.json()),
-      fetch(`${API}/api/reports/profit-and-loss?from_date=${new Date().getFullYear()}-01-01&to_date=${new Date().toISOString().slice(0,10)}`, { headers: h }).then(r => r.json()),
-      fetch(`${API}/api/reports/monthly`, { headers: h }).then(r => r.json()),
-    ]).then(([inv, k, m]) => {
-      setInvoices(inv.status === "fulfilled" && inv.value?.invoices ? inv.value.invoices.slice(0, 5) : []);
-      const plData = k.status === "fulfilled" ? k.value : null;
-      setKpis(plData ? { profit_and_loss: plData } : null);
-      setMonthly(m.status === "fulfilled" && Array.isArray(m.value) ? m.value : []);
-      if (k.status === "rejected" && inv.status === "rejected") {
-        setError("Failed to load data from Xero. Please reconnect.");
-      }
+    fetch(`${API}/api/admin/financial-overview`, { headers: authHeaders() })
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to load data from Xero");
+        return r.json();
+      })
+      .then(d => {
+        setInvoices(Array.isArray(d?.invoices) ? d.invoices.slice(0, 5) : []);
+        setKpis(d?.profit_and_loss ? { profit_and_loss: d.profit_and_loss, balance_sheet: d.balance_sheet } : null);
+        setMonthly(Array.isArray(d?.monthly) ? d.monthly : []);
       setLastSync(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
-    }).finally(() => setLoading(false));
+      })
+      .catch(() => setError("Failed to load live data from Xero. Please reconnect."))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
@@ -111,7 +97,7 @@ export default function DashboardPage() {
       <header className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Financial Overview</h2>
-          <p className="text-gray-500 mt-1">Live data from Xero · Last synced {lastSync}</p>
+          <p className="text-gray-500 mt-1">Combined live data across connected clients · Last refreshed {lastSync}</p>
         </div>
         <button
           onClick={load}
@@ -123,16 +109,16 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card title="Revenue (YTD)"  value={revenue}  icon={<TrendingUp  className="w-6 h-6 text-green-600"  />} />
-        <Card title="Expenses (YTD)" value={expenses} icon={<TrendingDown className="w-6 h-6 text-red-600"    />} />
-        <Card title="Net Profit"     value={profit}   icon={<DollarSign  className="w-6 h-6 text-blue-600"   />} />
-        <Card title="Bank Balance"   value={bank}     icon={<Building2   className="w-6 h-6 text-indigo-600" />} />
+        <Card title="Revenue (YTD, all clients)"  value={revenue}  icon={<TrendingUp  className="w-6 h-6 text-green-600"  />} />
+        <Card title="Expenses (YTD, all clients)" value={expenses} icon={<TrendingDown className="w-6 h-6 text-red-600"    />} />
+        <Card title="Net Profit (all clients)"     value={profit}   icon={<DollarSign  className="w-6 h-6 text-blue-600"   />} />
+        <Card title="Total Assets (all clients)"   value={bank}     icon={<Building2   className="w-6 h-6 text-indigo-600" />} />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Revenue vs Expenses (Last 6 Months)</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Combined Revenue vs Expenses (Last 6 Months)</h3>
           {monthly.length > 0 ? (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -152,7 +138,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Monthly Revenue</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Combined Monthly Revenue</h3>
           {monthly.length > 0 ? (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">

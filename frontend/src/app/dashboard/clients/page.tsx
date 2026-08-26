@@ -4,10 +4,10 @@ import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   UserPlus, Loader2, RefreshCw, CheckCircle2, XCircle,
-  ToggleLeft, ToggleRight, Link2, KeyRound, Eye, EyeOff
+  ToggleLeft, ToggleRight, Link2, KeyRound, Eye, EyeOff, Trash2
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function getToken(): string {
   try { return JSON.parse(localStorage.getItem("admin_user") || "").token; } catch { return ""; }
@@ -42,6 +42,7 @@ function ClientsContent() {
   const [newPassword, setNewPassword] = useState("");
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetting, setResetting]     = useState(false);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get("xero") === "connected") {
@@ -110,6 +111,31 @@ function ClientsContent() {
     });
     setActionId(null);
     load();
+  };
+
+  const deleteClient = async (client: Client) => {
+    const confirmed = window.confirm(
+      `Delete ${client.name}? This permanently removes the client, portal user, Xero connection, and cached data.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(client.id);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch(`${API}/api/admin/clients/${client.id}`, {
+        method: "DELETE",
+        headers: authH(),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Failed to delete client");
+      setSuccess(`Client "${client.name}" deleted.`);
+      load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const connectXero = (clientId: string) => {
@@ -285,7 +311,7 @@ function ClientsContent() {
                       </button>
                       <button
                         onClick={() => toggleActive(client)}
-                        disabled={actionId === client.id}
+                        disabled={actionId === client.id || deletingId === client.id}
                         title={client.is_active ? "Deactivate" : "Activate"}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition">
                         {actionId === client.id
@@ -293,6 +319,15 @@ function ClientsContent() {
                           : client.is_active
                             ? <ToggleRight className="w-5 h-5 text-green-600" />
                             : <ToggleLeft className="w-5 h-5 text-gray-400" />}
+                      </button>
+                      <button
+                        onClick={() => deleteClient(client)}
+                        disabled={deletingId === client.id}
+                        title="Delete client"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-60 transition">
+                        {deletingId === client.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Trash2 className="w-4 h-4" />}
                       </button>
                     </div>
                   </td>

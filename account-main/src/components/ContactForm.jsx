@@ -28,7 +28,7 @@ const ContactForm = ({ onSubmit }) => {
 
         try {
             // Save to Supabase DB via Python backend
-            await fetch('https://acadmin-seven.vercel.app/api/contacts', {
+            await fetch('http://localhost:8000/api/contacts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
