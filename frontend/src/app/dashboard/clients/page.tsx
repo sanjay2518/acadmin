@@ -7,7 +7,7 @@ import {
   ToggleLeft, ToggleRight, Link2, KeyRound, Eye, EyeOff, Trash2
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
 
 function getToken(): string {
   try { return JSON.parse(localStorage.getItem("admin_user") || "").token; } catch { return ""; }

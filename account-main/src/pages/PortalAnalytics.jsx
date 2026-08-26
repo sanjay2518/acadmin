@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import './PortalAnalytics.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'; // --- IGNORE ---
+const API = import.meta.env.VITE_API_URL || 'https://acadmin-seven.vercel.app'; // --- IGNORE ---
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LogOut, FileText, Loader2, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 
-const API = 'http://localhost:8000';
+const API = 'https://acadmin-seven.vercel.app';
 
 const statusIcon = (inv) => {
     if (inv.Status === 'PAID') return <CheckCircle2 size={14} className="text-green" />;

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Users, Mail, Phone, MapPin, Loader2, RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
 
 interface User {
   id: string;

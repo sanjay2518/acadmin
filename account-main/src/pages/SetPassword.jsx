@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KeyRound, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import './SetPassword.css';
 
-const API = 'http://localhost:8000';
+const API = 'https://acadmin-seven.vercel.app';
 
 export default function SetPassword() {
     const navigate = useNavigate();

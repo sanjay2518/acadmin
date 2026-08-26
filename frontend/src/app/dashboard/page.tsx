@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { Building2, TrendingUp, TrendingDown, DollarSign, Loader2, RefreshCw } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://acadmin-seven.vercel.app";
 
 function extractKpiValue(report: any, label: string): number {
   try {

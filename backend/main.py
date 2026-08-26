@@ -77,7 +77,7 @@ app.add_middleware(
         "http://localhost:3000", "http://localhost:5173",
         "http://localhost:5174", "http://localhost:5175",
         "https://acadmin-ifi1.vercel.app",
-        "http://localhost:8000",
+        "https://acadmin-seven.vercel.app",
         "https://acadmin-ah6w.vercel.app",
     ],
     allow_credentials=True,

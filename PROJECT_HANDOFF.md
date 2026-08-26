@@ -53,7 +53,7 @@ Clients can sign in to view their own portal and financial information.
 - Connect route for admins: `/api/xero/connect/admin/{client_id}`
 - Callback route: `/api/xero/callback`
 - The callback must be registered exactly in the Xero Developer Portal.
-- Local callback normally uses `http://localhost:8000/api/xero/callback`.
+- Local callback normally uses `https://acadmin-seven.vercel.app/api/xero/callback`.
 - Production callback normally uses the deployed backend URL plus `/api/xero/callback`.
 - `backend/main.py` resolves the callback from the incoming request host.
 - Never commit Xero client secrets, Supabase keys, or JWT secrets.

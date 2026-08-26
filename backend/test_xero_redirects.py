@@ -30,12 +30,12 @@ class XeroRedirectTests(unittest.TestCase):
 
     def test_local_callback_from_request_host(self):
         req = DummyRequest(
-            "http://localhost:8000/api/xero/connect",
+            "https://acadmin-seven.vercel.app/api/xero/connect",
             {"host": "localhost:8000"},
         )
         self.assertEqual(
             main._resolve_redirect_uri(req),
-            "http://localhost:8000/api/xero/callback",
+            "https://acadmin-seven.vercel.app/api/xero/callback",
         )
 
 
